@@ -1,0 +1,84 @@
+// DO NOT EDIT. This is code generated via package:easy_localization/generate.dart
+
+// ignore_for_file: constant_identifier_names
+
+abstract class  LocaleKeys {
+  static const splash_tagline = 'splash.tagline';
+  static const splash = 'splash';
+  static const welcome_skip = 'welcome.skip';
+  static const welcome_title_line_1 = 'welcome.title_line_1';
+  static const welcome_title_highlight = 'welcome.title_highlight';
+  static const welcome_subtitle = 'welcome.subtitle';
+  static const welcome_get_started = 'welcome.get_started';
+  static const welcome_sign_in = 'welcome.sign_in';
+  static const welcome = 'welcome';
+  static const shared_get_started = 'shared.get_started';
+  static const shared = 'shared';
+  static const onboarding_onboarding_title_1 = 'onboarding.onboarding_title_1';
+  static const onboarding_onboarding_subtitle_1 = 'onboarding.onboarding_subtitle_1';
+  static const onboarding_onboarding_title_2 = 'onboarding.onboarding_title_2';
+  static const onboarding_onboarding_subtitle_2 = 'onboarding.onboarding_subtitle_2';
+  static const onboarding_onboarding_title_3 = 'onboarding.onboarding_title_3';
+  static const onboarding_onboarding_subtitle_3 = 'onboarding.onboarding_subtitle_3';
+  static const onboarding = 'onboarding';
+  static const home_home_title = 'home.home_title';
+  static const home_welcome_home = 'home.welcome_home';
+  static const home_home_subtitle = 'home.home_subtitle';
+  static const home = 'home';
+  static const auth_log_in = 'auth.log_in';
+  static const auth_log_in_subtitle = 'auth.log_in_subtitle';
+  static const auth_email = 'auth.email';
+  static const auth_email_required = 'auth.email_required';
+  static const auth_email_invalid = 'auth.email_invalid';
+  static const auth_password = 'auth.password';
+  static const auth_password_required = 'auth.password_required';
+  static const auth_password_too_short = 'auth.password_too_short';
+  static const auth_remember_me = 'auth.remember_me';
+  static const auth_forgot_password = 'auth.forgot_password';
+  static const auth_login_button = 'auth.login_button';
+  static const auth_dont_have_account = 'auth.dont_have_account';
+  static const auth_sign_up = 'auth.sign_up';
+  static const auth_create_account = 'auth.create_account';
+  static const auth_create_account_subtitle = 'auth.create_account_subtitle';
+  static const auth_name = 'auth.name';
+  static const auth_name_required = 'auth.name_required';
+  static const auth_confirm_password = 'auth.confirm_password';
+  static const auth_confirm_password_required = 'auth.confirm_password_required';
+  static const auth_passwords_do_not_match = 'auth.passwords_do_not_match';
+  static const auth_create_account_button = 'auth.create_account_button';
+  static const auth_already_have_account = 'auth.already_have_account';
+  static const auth_sign_in = 'auth.sign_in';
+  static const auth_or_continue_with = 'auth.or_continue_with';
+  static const auth_forgot_password_title = 'auth.forgot_password_title';
+  static const auth_forgot_password_subtitle = 'auth.forgot_password_subtitle';
+  static const auth_reset_link_sent = 'auth.reset_link_sent';
+  static const auth_welcome_back = 'auth.welcome_back';
+  static const auth_sign_in_subtitle = 'auth.sign_in_subtitle';
+  static const auth_forgot_password_link = 'auth.forgot_password_link';
+  static const auth_or = 'auth.or';
+  static const auth_signed_in = 'auth.signed_in';
+  static const auth_create_your_account = 'auth.create_your_account';
+  static const auth_sign_up_subtitle = 'auth.sign_up_subtitle';
+  static const auth_account_created = 'auth.account_created';
+  static const auth_display_name = 'auth.display_name';
+  static const auth_display_name_required = 'auth.display_name_required';
+  static const auth_username = 'auth.username';
+  static const auth_username_invalid = 'auth.username_invalid';
+  static const auth_rule_min_length = 'auth.rule_min_length';
+  static const auth_rule_number = 'auth.rule_number';
+  static const auth_rule_letter = 'auth.rule_letter';
+  static const auth_password_rules_unmet = 'auth.password_rules_unmet';
+  static const auth_agree_prefix = 'auth.agree_prefix';
+  static const auth_terms_of_service = 'auth.terms_of_service';
+  static const auth_agree_and = 'auth.agree_and';
+  static const auth_privacy_policy = 'auth.privacy_policy';
+  static const auth_terms_required = 'auth.terms_required';
+  static const auth_forgot_password_question = 'auth.forgot_password_question';
+  static const auth_forgot_description = 'auth.forgot_description';
+  static const auth_send_reset_link = 'auth.send_reset_link';
+  static const auth_reset_sent_title = 'auth.reset_sent_title';
+  static const auth_reset_sent_body = 'auth.reset_sent_body';
+  static const auth_reset_failed_title = 'auth.reset_failed_title';
+  static const auth = 'auth';
+
+}
