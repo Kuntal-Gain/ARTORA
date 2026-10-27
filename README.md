@@ -2,6 +2,9 @@
 
 # 🎨 Artora
 
+<img width="125" height="125" alt="applogo" src="https://github.com/user-attachments/assets/7f73e378-e647-49e2-80b5-7b4799a79adc" />
+
+
 **A home for independent artists to share their work, connect with peers, and grow together.**
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
@@ -160,6 +163,18 @@ After editing translations in `assets/translations/*.json`:
 flutter pub run easy_localization:generate -S assets/translations -O lib/src/core/i18n -o locale_keys.g.dart
 ```
 
+## UI/UX
+<img width="1536" height="1024" alt="mockup-3" src="https://github.com/user-attachments/assets/94e5910f-9d1f-410f-9042-c45cc8aaa0c9" />
+<img width="1536" height="1024" alt="mockup-4" src="https://github.com/user-attachments/assets/dee11863-f215-4e6d-82ef-a602e3e95200" />
+<img width="1536" height="1024" alt="mockup-5" src="https://github.com/user-attachments/assets/456b3b57-86b5-4b07-8979-14b99184ddbb" />
+<img width="1536" height="1024" alt="mockup-6" src="https://github.com/user-attachments/assets/1b372229-24b0-4637-9258-17fe3064bbc4" />
+<img width="1536" height="1024" alt="mockup-7" src="https://github.com/user-attachments/assets/fc371dd7-0a8f-4987-b692-4ecf838fb8be" />
+<img width="1536" height="1024" alt="mockup-8" src="https://github.com/user-attachments/assets/55bb3866-08ba-49e8-9373-018813124b7a" />
+<img width="1536" height="1024" alt="mockup-shared" src="https://github.com/user-attachments/assets/82422a74-a7ea-4a12-b773-8530bbd7a357" />
+<img width="1536" height="1024" alt="mockup-1" src="https://github.com/user-attachments/assets/621f7566-314f-4c14-8583-1eb771cd0ecc" />
+<img width="1536" height="1024" alt="mockup-2" src="https://github.com/user-attachments/assets/1378ca2a-f2ec-4985-b4e4-8fce6706656b" />
+
+
 ## Contributing
 
 Contributions are welcome!
@@ -174,13 +189,9 @@ Contributions are welcome!
 
 Thanks to everyone who helps build Artora.
 
-<a href="https://github.com/<your-username>/artora/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=<your-username>/artora" alt="Contributors" />
+<a href="https://github.com/Kuntal-Gain/artora/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Kuntal-Gain/artora" alt="Contributors" />
 </a>
-
-## License
-
-No license has been chosen yet. Add a `LICENSE` file (for example MIT) and update the badge above.
 
 ---
 
