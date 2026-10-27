@@ -1,3 +1,5 @@
+import 'package:artora/src/features/auth/data/auth_usecase.dart';
+import 'package:artora/src/features/auth/data/auth_usecase_impl.dart';
 import 'package:artora/src/imports/imports.dart';
 
 typedef LoginParams = ({String email, String password});
@@ -8,65 +10,66 @@ typedef SignUpParams = ({
   String password,
 });
 
-/// Maps a service result onto [RequestState] so screens never see `Either`.
-RequestState<void> _toState<T>(Either<Failure, T> result) =>
-    result.fold<RequestState<void>>(
-      RequestFailure<void>.new,
-      (_) => const RequestSuccess<void>(null),
-    );
+final authUsecaseProvider = Provider<AuthUsecase>((ref) => AuthUsecaseImpl());
 
 class LoginNotifier extends StateNotifier<RequestState<void>> {
-  LoginNotifier() : super(const RequestInitial());
+  LoginNotifier(this._usecase) : super(const RequestInitial());
+
+  final AuthUsecase _usecase;
 
   Future<void> submit(LoginParams params) async {
     state = const RequestLoading();
-    final result = await AuthService.instance.login(
+    final result = await _usecase.signIn(
       email: params.email,
       password: params.password,
     );
     if (!mounted) return;
-    state = _toState(result);
+    state = result.toRequestState();
   }
 }
 
 class SignUpNotifier extends StateNotifier<RequestState<void>> {
-  SignUpNotifier() : super(const RequestInitial());
+  SignUpNotifier(this._usecase) : super(const RequestInitial());
+
+  final AuthUsecase _usecase;
 
   Future<void> submit(SignUpParams params) async {
     state = const RequestLoading();
-    final result = await AuthService.instance.signUp(
+    final result = await _usecase.signUp(
       name: params.name,
       username: params.username,
       email: params.email,
       password: params.password,
     );
     if (!mounted) return;
-    state = _toState(result);
+    state = result.toRequestState();
   }
 }
 
 class ForgotPasswordNotifier extends StateNotifier<RequestState<void>> {
-  ForgotPasswordNotifier() : super(const RequestInitial());
+  ForgotPasswordNotifier(this._usecase) : super(const RequestInitial());
+
+  final AuthUsecase _usecase;
 
   Future<void> submit(String email) async {
     state = const RequestLoading();
-    final result = await AuthService.instance.forgotPassword(email: email);
+    final result = await _usecase.forgotPassword(email: email);
     if (!mounted) return;
-    state = _toState(result);
+    state = result.toRequestState();
   }
 }
 
 final loginProvider =
     StateNotifierProvider.autoDispose<LoginNotifier, RequestState<void>>(
-      (ref) => LoginNotifier(),
+      (ref) => LoginNotifier(ref.watch(authUsecaseProvider)),
     );
 
 final signUpProvider =
     StateNotifierProvider.autoDispose<SignUpNotifier, RequestState<void>>(
-      (ref) => SignUpNotifier(),
+      (ref) => SignUpNotifier(ref.watch(authUsecaseProvider)),
     );
 
 final forgotPasswordProvider = StateNotifierProvider.autoDispose<
   ForgotPasswordNotifier,
   RequestState<void>
->((ref) => ForgotPasswordNotifier());
+>((ref) => ForgotPasswordNotifier(ref.watch(authUsecaseProvider)));

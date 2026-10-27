@@ -16,28 +16,6 @@ FutureEither<T> runTask<T>(
   final startedAt = DateTime.now();
   AppLogger.info('$operation started', category: category, context: context);
 
-  if (requiresNetwork) {
-    final hasNetwork = await InternetConnectionService().hasConnection();
-
-    if (!hasNetwork) {
-      AppLogger.warning(
-        '$operation skipped: network unavailable',
-        category: category,
-        context: context,
-      );
-      showGlobalToast(
-        message:
-            'No internet connection. Please check your connection and try again.',
-        status: 'warning',
-      );
-      return left(
-        const NetworkFailure(
-          'No internet connection. Please check your connection and try again.',
-        ),
-      );
-    }
-  }
-
   try {
     final result = await action();
     AppLogger.success(
@@ -61,7 +39,11 @@ FutureEither<T> runTask<T>(
         'durationMs': DateTime.now().difference(startedAt).inMilliseconds,
       },
     );
-    return left(Failure.fromException(error, stackTrace));
+    final failure = Failure.fromException(error, stackTrace);
+    if (requiresNetwork && failure is NetworkFailure) {
+      showGlobalToast(message: failure.message, status: 'warning');
+    }
+    return left(failure);
   }
 }
 
