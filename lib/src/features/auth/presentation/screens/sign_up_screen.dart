@@ -55,6 +55,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           showGlobalToast(message: failure.message, status: 'error');
         case RequestSuccess():
           showGlobalToast(message: LocaleKeys.auth_account_created.tr());
+          context.go(AppRoutes.profileSetup);
         case RequestInitial() || RequestLoading():
           break;
       }

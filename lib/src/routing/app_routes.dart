@@ -11,6 +11,13 @@ abstract final class AppRoutes {
   static const String login = '/login';
   static const String signup = '/signup';
   static const String forgotPassword = '/forgot-password';
+  static const String profileSetup = '/profile-setup';
+  static const String explore = '/explore';
+  static const String saved = '/saved';
+  static const String profile = '/profile';
+
+  /// Optional query parameters: `q` (query) and `scope` (`SearchScope.name`).
+  static const String search = '/search';
   /// Debug-only component gallery.
   static const String uiShowcase = '/debug/ui-showcase';
 }

@@ -7,11 +7,15 @@ class AuthScaffold extends StatelessWidget {
     required this.title,
     this.subtitle,
     required this.children,
+    this.showBack = true,
   });
 
   final String title;
   final String? subtitle;
   final List<Widget> children;
+
+  /// Hide the back arrow on screens that can't be left (e.g. profile setup).
+  final bool showBack;
 
   @override
   Widget build(BuildContext context) {
@@ -28,25 +32,28 @@ class AuthScaffold extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Fixed top bar: stays in place while the content scrolls.
-                Padding(
-                  padding: AppSpacing.insetPage.copyWith(top: AppSpacing.sm),
-                  child: Tooltip(
-                    message: MaterialLocalizations.of(context).backButtonTooltip,
-                    child: InkResponse(
-                      radius: 24,
-                      onTap: () => context.canPop()
-                          ? context.pop()
-                          : context.go(AppRoutes.onboarding),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                        child: Icon(
-                          Icons.arrow_back_rounded,
-                          color: colors.onSurface,
+                if (showBack)
+                  Padding(
+                    padding: AppSpacing.insetPage.copyWith(top: AppSpacing.sm),
+                    child: Tooltip(
+                      message:
+                          MaterialLocalizations.of(context).backButtonTooltip,
+                      child: InkResponse(
+                        radius: 24,
+                        onTap: () => context.canPop()
+                            ? context.pop()
+                            : context.go(AppRoutes.onboarding),
+                        child: Padding(
+                          padding:
+                              EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                          child: Icon(
+                            Icons.arrow_back_rounded,
+                            color: colors.onSurface,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
                 Expanded(
                   child: SingleChildScrollView(
                     keyboardDismissBehavior:

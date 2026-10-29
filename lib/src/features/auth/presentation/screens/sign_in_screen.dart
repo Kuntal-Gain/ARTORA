@@ -36,8 +36,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       switch (next) {
         case RequestFailure(:final failure):
           showGlobalToast(message: failure.message, status: 'error');
-        case RequestSuccess():
+        case RequestSuccess(:final data):
           showGlobalToast(message: LocaleKeys.auth_signed_in.tr());
+          context.go(data ? AppRoutes.profileSetup : AppRoutes.home);
         case RequestInitial() || RequestLoading():
           break;
       }

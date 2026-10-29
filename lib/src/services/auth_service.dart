@@ -108,6 +108,7 @@ class AuthService {
         'id': user.id,
         'email': user.email,
         'name': user.userMetadata?['name'] ?? '',
+        'username': user.userMetadata?['username'],
         'photoUrl': user.userMetadata?['avatar_url'],
       };
     },

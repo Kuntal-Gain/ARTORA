@@ -81,5 +81,59 @@
     "reset_sent_title": "再設定リンクを送信しました",
     "reset_sent_body": "{email} にパスワード再設定用のリンクを送信しました。受信トレイをご確認ください。",
     "reset_failed_title": "再設定リンクを送信できませんでした"
+  },
+  "profile_setup": {
+    "title": "アーティストプロフィールを作成",
+    "subtitle": "あなたが誰で、何を制作しているかをコミュニティに伝えましょう。",
+    "tap_to_upload": "タップして写真をアップロード",
+    "optional": "（任意）",
+    "bio": "自己紹介",
+    "bio_hint": "あなたと作品について教えてください…",
+    "specialties": "得意分野",
+    "username_taken": "このユーザー名はすでに使われています",
+    "continue_button": "続ける",
+    "saved": "プロフィールを作成しました"
+  },
+  "discover": {
+    "search_hint_home": "アーティスト、作品、タグを検索...",
+    "search_hint_explore": "作品、アーティスト、タグを検索...",
+    "for_you": "おすすめ",
+    "following": "フォロー中",
+    "follow": "フォロー",
+    "like": "いいね",
+    "save": "保存",
+    "notifications": "お知らせ",
+    "notifications_coming_soon": "お知らせ機能は近日公開予定です",
+    "all": "すべて",
+    "artwork": "作品",
+    "artists": "アーティスト",
+    "tags": "タグ",
+    "trending_tags": "トレンドタグ",
+    "see_all": "すべて見る",
+    "curated_collections": "特集コレクション",
+    "discover_artists": "注目のアーティスト",
+    "editors_picks": "編集部のおすすめ",
+    "recent_searches": "最近の検索",
+    "clear_all": "すべて削除",
+    "clear_search": "検索をクリア",
+    "cancel": "キャンセル",
+    "results": "検索結果",
+    "result_count": "{label}（{count}）",
+    "followers": "フォロワー {count}人",
+    "artworks_count": "{count}作品",
+    "following_empty_title": "まだ何もありません",
+    "following_empty_subtitle": "アーティストをフォローすると、最新作品がここに表示されます。"
+  },
+  "nav": {
+    "home": "ホーム",
+    "explore": "探す",
+    "saved": "保存済み",
+    "profile": "プロフィール",
+    "create": "作成",
+    "create_coming_soon": "作品のアップロードは近日公開予定です"
+  },
+  "profile": {
+    "coming_soon_title": "プロフィールは準備中です",
+    "coming_soon_subtitle": "プロフィールページは近日公開予定です。"
   }
 }

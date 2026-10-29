@@ -81,5 +81,59 @@
     "reset_sent_title": "Reset link sent!",
     "reset_sent_body": "We've sent a password reset link to {email}. Please check your inbox.",
     "reset_failed_title": "Couldn't send reset link"
+  },
+  "profile_setup": {
+    "title": "Create Your Artist Profile",
+    "subtitle": "Let the community know who you are and what you create.",
+    "tap_to_upload": "Tap to upload a photo",
+    "optional": "(Optional)",
+    "bio": "Bio",
+    "bio_hint": "Tell people about you and your art…",
+    "specialties": "Creative Specialties",
+    "username_taken": "That username is already taken",
+    "continue_button": "Continue",
+    "saved": "Profile created"
+  },
+  "discover": {
+    "search_hint_home": "Search artists, artwork, tags...",
+    "search_hint_explore": "Search artwork, artists, tags...",
+    "for_you": "For You",
+    "following": "Following",
+    "follow": "Follow",
+    "like": "Like",
+    "save": "Save",
+    "notifications": "Notifications",
+    "notifications_coming_soon": "Notifications are coming soon",
+    "all": "All",
+    "artwork": "Artwork",
+    "artists": "Artists",
+    "tags": "Tags",
+    "trending_tags": "Trending Tags",
+    "see_all": "See All",
+    "curated_collections": "Curated Collections",
+    "discover_artists": "Discover Amazing Artists",
+    "editors_picks": "Editor's Picks",
+    "recent_searches": "Recent Searches",
+    "clear_all": "Clear All",
+    "clear_search": "Clear search",
+    "cancel": "Cancel",
+    "results": "Results",
+    "result_count": "{label} ({count})",
+    "followers": "{count} followers",
+    "artworks_count": "{count} artworks",
+    "following_empty_title": "Nothing here yet",
+    "following_empty_subtitle": "Follow artists to see their latest work here."
+  },
+  "nav": {
+    "home": "Home",
+    "explore": "Explore",
+    "saved": "Saved",
+    "profile": "Profile",
+    "create": "Create",
+    "create_coming_soon": "Uploading artwork is coming soon"
+  },
+  "profile": {
+    "coming_soon_title": "Your profile is on its way",
+    "coming_soon_subtitle": "Profile pages are coming soon."
   }
 }
