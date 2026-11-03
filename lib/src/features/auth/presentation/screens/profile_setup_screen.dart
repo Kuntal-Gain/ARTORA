@@ -68,20 +68,23 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     });
   }
 
-  String? _validateUsername(String? value) {
-    final invalid = AppValidators.username(value);
-    if (invalid != null) return invalid;
-    final availability = ref.read(usernameAvailabilityProvider);
-    if (availability case RequestSuccess(data: false)) {
-      return LocaleKeys.profile_setup_username_taken.tr();
-    }
-    return null;
+String? _validateUsername(String? value) {
+  final invalid = AppValidators.username(value);
+  if (invalid != null) return invalid;
+
+  final availability = ref.read(usernameAvailabilityProvider);
+
+  if (availability case RequestSuccess<bool>(data: true)) {
+    return LocaleKeys.profile_setup_username_taken.tr();
   }
+
+  return null;
+}
 
   AppFieldStatus _usernameStatus(RequestState<bool> availability) =>
       switch (availability) {
-        RequestSuccess(data: true) => AppFieldStatus.success,
-        RequestSuccess(data: false) => AppFieldStatus.error,
+        RequestSuccess(data: true) => AppFieldStatus.error,
+        RequestSuccess(data: false) => AppFieldStatus.success,
         RequestInitial() ||
         RequestLoading() ||
         RequestSuccess() ||
@@ -89,10 +92,58 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       };
 
   // Profile isn't saved yet: Continue goes straight to the home feed.
-  void _submit() {
-    FocusScope.of(context).unfocus();
-    context.go(AppRoutes.home);
+ 
+Future<void> _submit() async {
+  if (ref.read(profileSetupProvider).isLoading) return;
+
+  FocusScope.of(context).unfocus();
+
+  if (!(_formKey.currentState?.validate() ?? false)) return;
+
+  final availability = ref.read(usernameAvailabilityProvider);
+
+  switch (availability) {
+    case RequestSuccess<bool>(data: false):
+      // Username is available. Continue submission.
+      break;
+
+    case RequestSuccess<bool>(data: true):
+      showGlobalToast(
+        message: 'This username is already taken.',
+        status: 'error',
+      );
+      return;
+
+    case RequestLoading():
+      showGlobalToast(
+        message: 'Checking username, please wait...',
+        status: 'error',
+      );
+      return;
+
+    case RequestFailure():
+    case RequestInitial():
+      showGlobalToast(
+        message: 'Username is not verified. Please try again.',
+        status: 'error',
+      );
+      return;
+
+    default:
+      return;
   }
+
+  final ProfileSetupParams params = (
+    displayName: _name.text.trim(),
+    username: _username.text.trim(),
+    bio: _bio.text.trim(),
+    specialties: _specialties.toList(),
+    avatar: ref.read(profileAvatarProvider),
+  );
+
+  await ref.read(profileSetupProvider.notifier).submit(params);
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -141,18 +192,62 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 enabled: !state.isLoading,
               ),
               AppSpacing.vGap(AppSpacing.formFieldGap),
+              // AuthField(
+              //   label: LocaleKeys.auth_username.tr(),
+              //   hint: 'alexrart',
+              //   controller: _username,
+              //   icon: const Icon(Icons.alternate_email_rounded),
+              //   validator: _validateUsername,
+              //   status: _usernameStatus(availability),
+              //   onChanged: (value) => ref
+              //       .read(usernameAvailabilityProvider.notifier)
+              //       .onChanged(value),
+              //   enabled: !state.isLoading,
+              // ),
               AuthField(
-                label: LocaleKeys.auth_username.tr(),
-                hint: 'alexrart',
-                controller: _username,
-                icon: const Icon(Icons.alternate_email_rounded),
-                validator: _validateUsername,
-                status: _usernameStatus(availability),
-                onChanged: (value) => ref
-                    .read(usernameAvailabilityProvider.notifier)
-                    .onChanged(value),
-                enabled: !state.isLoading,
+  label: LocaleKeys.auth_username.tr(),
+  hint: 'alexrart',
+  controller: _username,
+  icon: const Icon(Icons.alternate_email_rounded),
+  validator: _validateUsername,
+  status: _usernameStatus(availability),
+  onChanged: (value) => ref
+      .read(usernameAvailabilityProvider.notifier)
+      .onChanged(value),
+  enabled: !state.isLoading,
+),
+
+AnimatedSwitcher(
+  duration: const Duration(milliseconds: 200),
+  child: availability is RequestLoading
+      ? Padding(
+          key: const ValueKey('username-checking'),
+          padding: EdgeInsets.only(top: 8.r),
+          child: Row(
+            children: [
+              SizedBox(
+                height: 14.r,
+                width: 14.r,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colors.primary,
+                ),
               ),
+              SizedBox(width: 8.r),
+              Text(
+                'Checking username...',
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        )
+      : const SizedBox.shrink(
+          key: ValueKey('username-idle'),
+        ),
+),
               AppSpacing.vGap(AppSpacing.formFieldGap),
               _OptionalLabel(label: LocaleKeys.profile_setup_bio.tr()),
               AppSpacing.vGap(AppSpacing.sm),
@@ -190,7 +285,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   size: 18.r,
                   color: colors.onPrimary,
                 ),
-                onPressed: _submit,
+                onPressed: state.isLoading || availability is RequestLoading
+                    ? null
+                    : _submit,
               ),
             ],
           ),
