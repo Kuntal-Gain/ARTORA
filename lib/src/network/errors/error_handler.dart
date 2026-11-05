@@ -163,7 +163,8 @@ abstract final class AppErrorHandler {
     final message = switch (status) {
       StatusCode.payloadTooLarge => StatusCode.messageFor(status),
       StatusCode.unsupportedMediaType => StatusCode.messageFor(status),
-      StatusCode.unauthorized || StatusCode.forbidden =>
+      StatusCode.unauthorized ||
+      StatusCode.forbidden =>
         "You don't have permission to upload here.",
       StatusCode.notFound => "We couldn't find that file.",
       StatusCode.conflict => 'A file with that name already exists.',
@@ -186,7 +187,8 @@ abstract final class AppErrorHandler {
         NotFoundFailure(message, error: e, statusCode: status),
       StatusCode.tooManyRequests =>
         RateLimitFailure(message, error: e, statusCode: status),
-      StatusCode.badRequest || StatusCode.unprocessableEntity =>
+      StatusCode.badRequest ||
+      StatusCode.unprocessableEntity =>
         ValidationFailure(message, error: e, statusCode: status),
       _ => ServerFailure(message, error: e, statusCode: status),
     };

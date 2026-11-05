@@ -23,7 +23,8 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
       RequestSuccess(:final data) => data,
       _ => null,
     };
-    final feed = ref.watch(_showFollowing ? followingFeedProvider : feedProvider);
+    final feed =
+        ref.watch(_showFollowing ? followingFeedProvider : feedProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -84,24 +85,26 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
                 ),
                 sliver: SliverToBoxAdapter(
                   child: switch (feed) {
-                    RequestInitial() || RequestLoading() =>
+                    RequestInitial() ||
+                    RequestLoading() =>
                       const MasonrySkeleton(),
                     RequestFailure() => AppErrorPresets.network(
-                      onRetry: () => ref.read(feedProvider.notifier).refresh(),
-                    ),
+                        onRetry: () =>
+                            ref.read(feedProvider.notifier).refresh(),
+                      ),
                     RequestSuccess(:final data) when data.isEmpty =>
                       AppEmptyState(
                         icon: Icons.people_outline_rounded,
                         title: LocaleKeys.discover_following_empty_title.tr(),
-                        subtitle: LocaleKeys.discover_following_empty_subtitle
-                            .tr(),
+                        subtitle:
+                            LocaleKeys.discover_following_empty_subtitle.tr(),
                         actionLabel: LocaleKeys.nav_explore.tr(),
                         onAction: () => context.go(AppRoutes.explore),
                       ),
                     RequestSuccess(:final data) => ArtworkMasonry(
-                      artworks: data,
-                      showFollow: true,
-                    ),
+                        artworks: data,
+                        showFollow: true,
+                      ),
                   },
                 ),
               ),

@@ -1,6 +1,11 @@
 import 'dart:async';
 
+import 'package:artora/src/features/auth/presentation/providers/auth_providers.dart';
 import 'package:artora/src/features/discover/data/discover_repository.dart';
+import 'package:artora/src/features/discover/data/discover_usecase.dart';
+import 'package:artora/src/features/discover/model/artwork_model.dart';
+import 'package:artora/src/features/discover/state/artwork_provider.dart';
+import 'package:artora/src/services/supabase_storage_service.dart';
 import 'package:artora/src/features/discover/data/recent_search_store.dart';
 import 'package:artora/src/features/discover/data/sample_discover_repository.dart';
 import 'package:artora/src/features/discover/model/discover_models.dart';
@@ -105,8 +110,8 @@ class SearchNotifier extends StateNotifier<RequestState<SearchResults>> {
 
 class RecentSearchesNotifier extends StateNotifier<List<String>> {
   RecentSearchesNotifier(RecentSearchStore store)
-    : _store = store,
-      super(store.read());
+      : _store = store,
+        super(store.read());
 
   final RecentSearchStore _store;
 
@@ -130,52 +135,100 @@ class RecentSearchesNotifier extends StateNotifier<List<String>> {
   }
 }
 
+/// The signed-in user, shaped as an [Artist] for the top bar.
 final currentArtistProvider =
-    StateNotifierProvider<LoadNotifier<Artist>, RequestState<Artist>>(
-      (ref) => LoadNotifier(ref.watch(discoverRepositoryProvider).currentArtist),
+    StateNotifierProvider<LoadNotifier<Artist>, RequestState<Artist>>((ref) {
+  final auth = ref.watch(authUsecaseProvider);
+  return LoadNotifier(() async {
+    final result = await auth.getUser();
+    return result.map(
+      (user) => Artist(
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarUrl: SupabaseStorageService.instance.publicUrl(
+              SupabaseBuckets.avatars,
+              user.avatarPath,
+            ) ??
+            '',
+      ),
     );
+  });
+});
 
-final feedProvider =
-    StateNotifierProvider<
-      LoadNotifier<List<Artwork>>,
-      RequestState<List<Artwork>>
-    >((ref) => LoadNotifier(ref.watch(discoverRepositoryProvider).feed));
+/// The API's artwork has no artist, like/comment counts or image size yet, so
+/// those fall back to neutral values until the backend returns them.
+Artwork _toArtwork(ArtworkModel model) {
+  final image = model.images.isEmpty ? null : model.images.first;
+  return Artwork(
+    id: model.id,
+    title: model.title,
+    imageUrl: image?.thumbnailUrl ?? image?.url ?? '',
+    aspectRatio: 1,
+    artist:
+        Artist(id: model.userId, username: '', displayName: '', avatarUrl: ''),
+    category: model.category?.name ?? '',
+    tags: model.tags,
+  );
+}
 
-final exploreProvider =
-    StateNotifierProvider<
-      LoadNotifier<ExploreContent>,
-      RequestState<ExploreContent>
-    >((ref) => LoadNotifier(ref.watch(discoverRepositoryProvider).explore));
+final feedProvider = StateNotifierProvider<LoadNotifier<List<Artwork>>,
+    RequestState<List<Artwork>>>((ref) {
+  final usecase = ref.watch(discoverUsecaseProvider);
+  return LoadNotifier(() async {
+    final result = await usecase.getPublicFeed();
+    return result.map((list) => list.artworks.map(_toArtwork).toList());
+  });
+});
 
-final trendingTagsProvider =
-    StateNotifierProvider<LoadNotifier<List<String>>, RequestState<List<String>>>(
-      (ref) =>
-          LoadNotifier(ref.watch(discoverRepositoryProvider).trendingTags),
-    );
+final exploreProvider = StateNotifierProvider<LoadNotifier<ExploreContent>,
+        RequestState<ExploreContent>>(
+    (ref) => LoadNotifier(ref.watch(discoverRepositoryProvider).explore));
+
+final trendingTagsProvider = StateNotifierProvider<LoadNotifier<List<String>>,
+    RequestState<List<String>>>(
+  (ref) => LoadNotifier(ref.watch(discoverRepositoryProvider).trendingTags),
+);
 
 final followingProvider =
     StateNotifierProvider<ToggleSetNotifier, Set<String>>((ref) {
-      final repository = ref.watch(discoverRepositoryProvider);
-      return ToggleSetNotifier(
-        (id, on) => repository.setFollowing(id, following: on),
-        load: repository.followingIds,
-      );
-    });
+  final repository = ref.watch(discoverRepositoryProvider);
+  return ToggleSetNotifier(
+    (id, on) => repository.setFollowing(id, following: on),
+    load: repository.followingIds,
+  );
+});
 
+/// Ids in the public feed matching [test], used to seed like / save state.
+Future<Resource<Set<String>>> _feedIds(
+  DiscoverUsecase usecase,
+  bool Function(ArtworkModel) test,
+) async {
+  final result = await usecase.getPublicFeed();
+  return result.map(
+    (list) => list.artworks.where(test).map((a) => a.id).toSet(),
+  );
+}
+
+// The server flips the state, so [on] is unused.
 final likedProvider = StateNotifierProvider<ToggleSetNotifier, Set<String>>((
   ref,
 ) {
-  final repository = ref.watch(discoverRepositoryProvider);
-  return ToggleSetNotifier((id, on) => repository.setLiked(id, liked: on));
+  final usecase = ref.watch(discoverUsecaseProvider);
+  return ToggleSetNotifier(
+    (id, on) => usecase.toggleLike(id),
+    load: () => _feedIds(usecase, (a) => a.isLiked),
+  );
 });
 
 final bookmarkedProvider =
     StateNotifierProvider<ToggleSetNotifier, Set<String>>((ref) {
-      final repository = ref.watch(discoverRepositoryProvider);
-      return ToggleSetNotifier(
-        (id, on) => repository.setBookmarked(id, bookmarked: on),
-      );
-    });
+  final usecase = ref.watch(discoverUsecaseProvider);
+  return ToggleSetNotifier(
+    (id, on) => usecase.toggleSave(id),
+    load: () => _feedIds(usecase, (a) => a.isBookmarked),
+  );
+});
 
 /// Feed narrowed to artists the user follows ("Following" tab).
 final followingFeedProvider = Provider<RequestState<List<Artwork>>>((ref) {
@@ -183,8 +236,8 @@ final followingFeedProvider = Provider<RequestState<List<Artwork>>>((ref) {
   final following = ref.watch(followingProvider);
   return switch (feed) {
     RequestSuccess(:final data) => RequestSuccess(
-      data.where((artwork) => following.contains(artwork.artist.id)).toList(),
-    ),
+        data.where((artwork) => following.contains(artwork.artist.id)).toList(),
+      ),
     _ => feed,
   };
 });
@@ -194,8 +247,8 @@ final savedArtworksProvider = Provider<RequestState<List<Artwork>>>((ref) {
   final bookmarked = ref.watch(bookmarkedProvider);
   return switch (feed) {
     RequestSuccess(:final data) => RequestSuccess(
-      data.where((artwork) => bookmarked.contains(artwork.id)).toList(),
-    ),
+        data.where((artwork) => bookmarked.contains(artwork.id)).toList(),
+      ),
     _ => feed,
   };
 });
@@ -209,32 +262,30 @@ final exploreCategoryProvider = StateProvider.autoDispose<String?>(
 /// category.
 final filteredExploreProvider =
     Provider.autoDispose<RequestState<ExploreContent>>((ref) {
-      final explore = ref.watch(exploreProvider);
-      final category = ref.watch(exploreCategoryProvider);
-      if (category == null) return explore;
-      return switch (explore) {
-        RequestSuccess(:final data) => RequestSuccess((
-          categories: data.categories,
-          trendingTags: data.trendingTags,
-          collections: data.collections,
-          artists: data.artists
-              .where((artist) => artist.specialties.contains(category))
-              .toList(),
-          editorsPicks: data.editorsPicks
-              .where((artwork) => artwork.category == category)
-              .toList(),
-        )),
-        _ => explore,
-      };
-    });
+  final explore = ref.watch(exploreProvider);
+  final category = ref.watch(exploreCategoryProvider);
+  if (category == null) return explore;
+  return switch (explore) {
+    RequestSuccess(:final data) => RequestSuccess((
+        categories: data.categories,
+        trendingTags: data.trendingTags,
+        collections: data.collections,
+        artists: data.artists
+            .where((artist) => artist.specialties.contains(category))
+            .toList(),
+        editorsPicks: data.editorsPicks
+            .where((artwork) => artwork.category == category)
+            .toList(),
+      )),
+    _ => explore,
+  };
+});
 
-final searchProvider =
-    StateNotifierProvider.autoDispose<
-      SearchNotifier,
-      RequestState<SearchResults>
-    >((ref) => SearchNotifier(ref.watch(discoverRepositoryProvider)));
+final searchProvider = StateNotifierProvider.autoDispose<SearchNotifier,
+        RequestState<SearchResults>>(
+    (ref) => SearchNotifier(ref.watch(discoverRepositoryProvider)));
 
 final recentSearchesProvider =
     StateNotifierProvider<RecentSearchesNotifier, List<String>>(
-      (ref) => RecentSearchesNotifier(RecentSearchStore()),
-    );
+  (ref) => RecentSearchesNotifier(RecentSearchStore()),
+);

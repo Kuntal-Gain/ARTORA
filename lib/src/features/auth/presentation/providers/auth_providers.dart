@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:artora/src/features/auth/data/auth_usecase.dart';
 import 'package:artora/src/features/auth/data/auth_usecase_impl.dart';
+import 'package:artora/src/features/auth/model/user_model.dart';
 import 'package:artora/src/imports/imports.dart';
 
 typedef LoginParams = ({String email, String password});
@@ -150,33 +151,36 @@ class UsernameAvailabilityNotifier extends StateNotifier<RequestState<bool>> {
 
 final loginProvider =
     StateNotifierProvider.autoDispose<LoginNotifier, RequestState<bool>>(
-      (ref) => LoginNotifier(ref.watch(authUsecaseProvider)),
-    );
+  (ref) => LoginNotifier(ref.watch(authUsecaseProvider)),
+);
 
 final signUpProvider =
     StateNotifierProvider.autoDispose<SignUpNotifier, RequestState<void>>(
-      (ref) => SignUpNotifier(ref.watch(authUsecaseProvider)),
-    );
+  (ref) => SignUpNotifier(ref.watch(authUsecaseProvider)),
+);
 
 final forgotPasswordProvider = StateNotifierProvider.autoDispose<
-  ForgotPasswordNotifier,
-  RequestState<void>
->((ref) => ForgotPasswordNotifier(ref.watch(authUsecaseProvider)));
+        ForgotPasswordNotifier, RequestState<void>>(
+    (ref) => ForgotPasswordNotifier(ref.watch(authUsecaseProvider)));
 
-final profileSetupProvider = StateNotifierProvider.autoDispose<
-  ProfileSetupNotifier,
-  RequestState<void>
->((ref) => ProfileSetupNotifier(ref.watch(authUsecaseProvider)));
+final profileSetupProvider =
+    StateNotifierProvider.autoDispose<ProfileSetupNotifier, RequestState<void>>(
+        (ref) => ProfileSetupNotifier(ref.watch(authUsecaseProvider)));
 
 final profileAvatarProvider =
     StateNotifierProvider.autoDispose<ProfileAvatarNotifier, File?>(
-      (ref) => ProfileAvatarNotifier(ref.watch(authUsecaseProvider)),
-    );
+  (ref) => ProfileAvatarNotifier(ref.watch(authUsecaseProvider)),
+);
 
 final usernameAvailabilityProvider = StateNotifierProvider.autoDispose<
-  UsernameAvailabilityNotifier,
-  RequestState<bool>
->((ref) => UsernameAvailabilityNotifier(ref.watch(authUsecaseProvider)));
+        UsernameAvailabilityNotifier, RequestState<bool>>(
+    (ref) => UsernameAvailabilityNotifier(ref.watch(authUsecaseProvider)));
+
+/// The signed-in user's profile row (`null` when it can't be loaded).
+final currentUserProvider = FutureProvider.autoDispose<UserModel?>((ref) async {
+  final result = await ref.watch(authUsecaseProvider).getUser();
+  return result.dataOrNull;
+});
 
 /// Name / username entered at sign-up, used to prefill profile setup.
 final signUpPrefillProvider = FutureProvider.autoDispose<SignUpPrefill?>((

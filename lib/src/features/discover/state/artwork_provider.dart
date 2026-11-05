@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:artora/src/features/discover/data/discover_usecase.dart';
@@ -21,10 +20,8 @@ typedef DiscoverLoader<T> = Future<Resource<T>> Function();
 /// any discover GET operation.
 ///
 /// Automatically fetches when the provider is first watched.
-class DiscoverFetchNotifier<T>
-    extends StateNotifier<RequestState<T>> {
-  DiscoverFetchNotifier(this._loader)
-      : super(const RequestInitial()) {
+class DiscoverFetchNotifier<T> extends StateNotifier<RequestState<T>> {
+  DiscoverFetchNotifier(this._loader) : super(const RequestInitial()) {
     unawaited(Future.microtask(fetch));
   }
 
@@ -52,8 +49,7 @@ class DiscoverFetchNotifier<T>
 // ── PUBLIC FEED ─────────────────────────────────────────────
 
 final publicArtworkFeedProvider = StateNotifierProvider.autoDispose<
-    DiscoverFetchNotifier<ArtworkListModel>,
-    RequestState<ArtworkListModel>>(
+    DiscoverFetchNotifier<ArtworkListModel>, RequestState<ArtworkListModel>>(
   (ref) {
     final usecase = ref.watch(discoverUsecaseProvider);
 
@@ -111,9 +107,7 @@ final userSavedArtworksProvider = StateNotifierProvider.autoDispose.family<
 // ── SINGLE ARTWORK ──────────────────────────────────────────
 
 final singleArtworkProvider = StateNotifierProvider.autoDispose.family<
-    DiscoverFetchNotifier<ArtworkModel>,
-    RequestState<ArtworkModel>,
-    String>(
+    DiscoverFetchNotifier<ArtworkModel>, RequestState<ArtworkModel>, String>(
   (ref, postId) {
     final usecase = ref.watch(discoverUsecaseProvider);
 
@@ -125,15 +119,15 @@ final singleArtworkProvider = StateNotifierProvider.autoDispose.family<
 
 // ── POST ARTWORK NOTIFIER ───────────────────────────────────
 
-class PostArtworkNotifier
-    extends StateNotifier<RequestState<void>> {
+class PostArtworkNotifier extends StateNotifier<RequestState<void>> {
   PostArtworkNotifier(
-    this._usecase, {
+    this._send, {
     required void Function() onSuccess,
   })  : _onSuccess = onSuccess,
         super(const RequestInitial());
 
-  final DiscoverUsecase _usecase;
+  /// Create or update, depending on the provider.
+  final Future<Resource<void>> Function(PostArtworkModel) _send;
   final void Function() _onSuccess;
 
   bool _isSubmitting = false;
@@ -145,7 +139,7 @@ class PostArtworkNotifier
     state = const RequestLoading();
 
     try {
-      final result = await _usecase.postArtwork(artwork);
+      final result = await _send(artwork);
 
       if (!mounted) return;
 
@@ -167,18 +161,45 @@ class PostArtworkNotifier
 
 // ── POST ARTWORK PROVIDER ───────────────────────────────────
 
-final postArtworkProvider = StateNotifierProvider.autoDispose<
-    PostArtworkNotifier,
-    RequestState<void>>(
+final postArtworkProvider =
+    StateNotifierProvider.autoDispose<PostArtworkNotifier, RequestState<void>>(
   (ref) {
     return PostArtworkNotifier(
-      ref.watch(discoverUsecaseProvider),
+      ref.watch(discoverUsecaseProvider).postArtwork,
       onSuccess: () {
         ref.invalidate(publicArtworkFeedProvider);
         ref.invalidate(userArtworkFeedProvider);
       },
     );
   },
+);
+
+// ── UPDATE ARTWORK ──────────────────────────────────────────
+
+final updateArtworkProvider = StateNotifierProvider.autoDispose
+    .family<PostArtworkNotifier, RequestState<void>, String>(
+  (ref, artworkId) {
+    final usecase = ref.watch(discoverUsecaseProvider);
+
+    return PostArtworkNotifier(
+      (artwork) => usecase.updateArtwork(artworkId, artwork),
+      onSuccess: () {
+        ref.invalidate(publicArtworkFeedProvider);
+        ref.invalidate(userArtworkFeedProvider);
+        ref.invalidate(singleArtworkProvider(artworkId));
+      },
+    );
+  },
+);
+
+// ── CATEGORIES ──────────────────────────────────────────────
+
+final artworkCategoriesProvider = StateNotifierProvider.autoDispose<
+    DiscoverFetchNotifier<List<ArtworkCategoryModel>>,
+    RequestState<List<ArtworkCategoryModel>>>(
+  (ref) => DiscoverFetchNotifier(
+    ref.watch(discoverUsecaseProvider).getCategories,
+  ),
 );
 
 // ── GENERIC ARTWORK ACTION NOTIFIER ─────────────────────────
@@ -189,8 +210,7 @@ typedef ArtworkAction = Future<Resource<void>> Function();
 ///
 /// Each artwork gets its own action state through
 /// the corresponding family provider.
-class ArtworkActionNotifier
-    extends StateNotifier<RequestState<void>> {
+class ArtworkActionNotifier extends StateNotifier<RequestState<void>> {
   ArtworkActionNotifier(
     this._action, {
     required void Function() onSuccess,
@@ -231,10 +251,8 @@ class ArtworkActionNotifier
 
 // ── DELETE ARTWORK ──────────────────────────────────────────
 
-final deleteArtworkProvider = StateNotifierProvider.autoDispose.family<
-    ArtworkActionNotifier,
-    RequestState<void>,
-    String>(
+final deleteArtworkProvider = StateNotifierProvider.autoDispose
+    .family<ArtworkActionNotifier, RequestState<void>, String>(
   (ref, artworkId) {
     final usecase = ref.watch(discoverUsecaseProvider);
 
@@ -253,11 +271,8 @@ final deleteArtworkProvider = StateNotifierProvider.autoDispose.family<
 
 // ── TOGGLE ARTWORK LIKE ─────────────────────────────────────
 
-final toggleArtworkLikeProvider =
-    StateNotifierProvider.autoDispose.family<
-        ArtworkActionNotifier,
-        RequestState<void>,
-        String>(
+final toggleArtworkLikeProvider = StateNotifierProvider.autoDispose
+    .family<ArtworkActionNotifier, RequestState<void>, String>(
   (ref, artworkId) {
     final usecase = ref.watch(discoverUsecaseProvider);
 
@@ -275,11 +290,8 @@ final toggleArtworkLikeProvider =
 
 // ── TOGGLE ARTWORK SAVE ─────────────────────────────────────
 
-final toggleArtworkSaveProvider =
-    StateNotifierProvider.autoDispose.family<
-        ArtworkActionNotifier,
-        RequestState<void>,
-        String>(
+final toggleArtworkSaveProvider = StateNotifierProvider.autoDispose
+    .family<ArtworkActionNotifier, RequestState<void>, String>(
   (ref, artworkId) {
     final usecase = ref.watch(discoverUsecaseProvider);
 

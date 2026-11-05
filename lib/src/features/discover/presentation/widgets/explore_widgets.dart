@@ -270,7 +270,8 @@ class ArtistCard extends StatelessWidget {
             ),
           ),
           AppSpacing.vGap(AppSpacing.sm),
-          FollowPill(isFollowing: isFollowing, onPressed: onFollow, filled: true),
+          FollowPill(
+              isFollowing: isFollowing, onPressed: onFollow, filled: true),
         ],
       ),
     );

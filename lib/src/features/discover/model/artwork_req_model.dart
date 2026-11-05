@@ -1,10 +1,11 @@
-
 import 'dart:io';
 
 import 'package:equatable/equatable.dart';
 
-// Import your existing ArtworkImageModel.
-
+/// Values the create / edit form sends.
+///
+/// [images] are new local files to upload. On update an empty list keeps the
+/// artwork's existing images.
 class PostArtworkModel extends Equatable {
   const PostArtworkModel({
     required this.title,
@@ -19,10 +20,12 @@ class PostArtworkModel extends Equatable {
   final String? description;
   final String categoryId;
   final List<String> tags;
+
+  /// 'public', 'private' or 'draft'.
   final String visibility;
   final List<File> images;
 
-
+  /// Row values without the images (those are uploaded separately).
   Map<String, dynamic> toJson() {
     return {
       'title': title,
@@ -30,7 +33,6 @@ class PostArtworkModel extends Equatable {
       'category_id': categoryId,
       'tags': tags,
       'visibility': visibility,
-      'images': images.toList(),
     };
   }
 
@@ -54,11 +56,11 @@ class PostArtworkModel extends Equatable {
 
   @override
   List<Object?> get props => [
-    title,
-    description,
-    categoryId,
-    tags,
-    visibility,
-    images,
-  ];
+        title,
+        description,
+        categoryId,
+        tags,
+        visibility,
+        images,
+      ];
 }

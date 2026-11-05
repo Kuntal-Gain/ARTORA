@@ -229,10 +229,10 @@ class _ArtistAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AppAvatar(
-    imageUrl: artist.avatarUrl,
-    initials: artist.displayName,
-    radius: radius,
-  );
+        imageUrl: artist.avatarUrl,
+        initials: artist.displayName,
+        radius: radius,
+      );
 }
 
 class _Name extends StatelessWidget {
@@ -242,14 +242,14 @@ class _Name extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(
-    name,
-    maxLines: 1,
-    overflow: TextOverflow.ellipsis,
-    style: context.textTheme.labelMedium?.copyWith(
-      color: context.colors.onSurface,
-      fontWeight: FontWeight.w600,
-    ),
-  );
+        name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: context.textTheme.labelMedium?.copyWith(
+          color: context.colors.onSurface,
+          fontWeight: FontWeight.w600,
+        ),
+      );
 }
 
 class _OverlayStat extends StatelessWidget {

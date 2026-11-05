@@ -1,4 +1,3 @@
-
 import 'package:equatable/equatable.dart';
 
 class UserModel extends Equatable {
@@ -40,13 +39,12 @@ class UserModel extends Equatable {
       avatarPath: json['avatar_path'] as String?,
       coverPath: json['cover_path'] as String?,
       websiteUrl: json['website_url'] as String?,
-      socialLinks: (json['social_links'] as Map?)
-              ?.map(
-                (key, value) => MapEntry(
-                  key.toString(),
-                  value.toString(),
-                ),
-              ) ??
+      socialLinks: (json['social_links'] as Map?)?.map(
+            (key, value) => MapEntry(
+              key.toString(),
+              value.toString(),
+            ),
+          ) ??
           const {},
       specialties: List<String>.from(
         json['specialties'] as List? ?? const [],

@@ -12,6 +12,12 @@ class SupabaseStorageService {
 
   SupabaseClient get _client => AppConfig.supabase;
 
+  /// Public URL for a stored object; `null`/empty [path] gives `null`.
+  /// Assumes the bucket is public.
+  String? publicUrl(String bucket, String? path) => path == null || path.isEmpty
+      ? null
+      : _client.storage.from(bucket).getPublicUrl(path);
+
   /// Uploads [file] to [bucket]/[path] and returns [path].
   FutureEither<String> uploadFile({
     required String bucket,
@@ -22,9 +28,7 @@ class SupabaseStorageService {
   }) {
     return runTask(
       () async {
-        await _client.storage
-            .from(bucket)
-            .upload(
+        await _client.storage.from(bucket).upload(
               path,
               file,
               fileOptions: FileOptions(

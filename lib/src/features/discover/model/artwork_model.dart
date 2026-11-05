@@ -1,4 +1,3 @@
-
 import 'package:equatable/equatable.dart';
 
 class ArtworkListModel extends Equatable {
@@ -87,7 +86,6 @@ class ArtworkPaginationModel extends Equatable {
   List<Object?> get props => [nextCursor, hasMore];
 }
 
-
 class ArtworkModel extends Equatable {
   const ArtworkModel({
     required this.id,
@@ -123,7 +121,12 @@ class ArtworkModel extends Equatable {
       userId: json['user_id'] as String? ?? '',
       title: json['title'] as String? ?? '',
       description: json['description'] as String?,
-      images: (json['images'] as List<dynamic>? ?? [])
+      images: ((json['images'] as List<dynamic>? ?? []).toList()
+            ..sort(
+              (a, b) => ((a as Map)['position'] as num? ?? 0).compareTo(
+                (b as Map)['position'] as num? ?? 0,
+              ),
+            ))
           .map(
             (e) => ArtworkImageModel.fromJson(
               e as Map<String, dynamic>,
@@ -199,19 +202,19 @@ class ArtworkModel extends Equatable {
 
   @override
   List<Object?> get props => [
-    id,
-    userId,
-    title,
-    description,
-    images,
-    category,
-    tags,
-    visibility,
-    isLiked,
-    isBookmarked,
-    createdAt,
-    updatedAt,
-  ];
+        id,
+        userId,
+        title,
+        description,
+        images,
+        category,
+        tags,
+        visibility,
+        isLiked,
+        isBookmarked,
+        createdAt,
+        updatedAt,
+      ];
 }
 
 class ArtworkImageModel extends Equatable {
@@ -229,7 +232,7 @@ class ArtworkImageModel extends Equatable {
 
   factory ArtworkImageModel.fromJson(Map<String, dynamic> json) {
     return ArtworkImageModel(
-      url: json['url'] as String? ?? '',
+      url: json['image_url'] as String? ?? json['url'] as String? ?? '',
       thumbnailUrl: json['thumbnail_url'] as String?,
       mimeType: json['mime_type'] as String?,
       size: (json['size'] as num?)?.toInt(),
@@ -261,11 +264,11 @@ class ArtworkImageModel extends Equatable {
 
   @override
   List<Object?> get props => [
-    url,
-    thumbnailUrl,
-    mimeType,
-    size,
-  ];
+        url,
+        thumbnailUrl,
+        mimeType,
+        size,
+      ];
 }
 
 class ArtworkCategoryModel extends Equatable {

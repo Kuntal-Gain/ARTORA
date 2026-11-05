@@ -69,7 +69,12 @@ sealed class Resource<T> {
 
   Resource<R> map<R>(R Function(T data) transform) => switch (this) {
         ResourceLoading<T>() => Resource<R>.loading(),
-        ResourceSuccess<T>(:final data, :final message, :final statusCode, :final meta) =>
+        ResourceSuccess<T>(
+          :final data,
+          :final message,
+          :final statusCode,
+          :final meta
+        ) =>
           Resource<R>.success(
             transform(data),
             message: message,

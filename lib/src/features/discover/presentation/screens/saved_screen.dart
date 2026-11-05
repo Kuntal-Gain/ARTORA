@@ -38,18 +38,19 @@ class SavedScreen extends ConsumerWidget {
               ),
               sliver: SliverToBoxAdapter(
                 child: switch (saved) {
-                  RequestInitial() || RequestLoading() =>
+                  RequestInitial() ||
+                  RequestLoading() =>
                     const MasonrySkeleton(),
                   RequestFailure() => AppErrorPresets.network(
-                    onRetry: () => ref.read(feedProvider.notifier).refresh(),
-                  ),
+                      onRetry: () => ref.read(feedProvider.notifier).refresh(),
+                    ),
                   RequestSuccess(:final data) when data.isEmpty =>
                     AppEmptyPresets.noSaved(
                       onExplore: () => context.go(AppRoutes.explore),
                     ),
                   RequestSuccess(:final data) => ArtworkMasonry(
-                    artworks: data,
-                  ),
+                      artworks: data,
+                    ),
                 },
               ),
             ),

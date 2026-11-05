@@ -16,8 +16,19 @@ abstract final class AppRoutes {
   static const String saved = '/saved';
   static const String profile = '/profile';
 
+  /// Create an artwork.
+  static const String createArtwork = '/artwork/new';
+
+  /// Edit an artwork; use [editArtworkPath] to build the location.
+  static const String editArtwork = '/artwork/:id/edit';
+  static String editArtworkPath(String id) => '/artwork/$id/edit';
+
+  /// Image preview; pass the picked `File` as `extra`, pops with the result.
+  static const String artworkPreview = '/artwork/preview';
+
   /// Optional query parameters: `q` (query) and `scope` (`SearchScope.name`).
   static const String search = '/search';
+
   /// Debug-only component gallery.
   static const String uiShowcase = '/debug/ui-showcase';
 }

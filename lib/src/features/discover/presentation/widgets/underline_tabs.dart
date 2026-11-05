@@ -21,9 +21,8 @@ class UnderlineTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final baseStyle = dense
-        ? context.textTheme.titleSmall
-        : context.textTheme.titleMedium;
+    final baseStyle =
+        dense ? context.textTheme.titleSmall : context.textTheme.titleMedium;
 
     return DecoratedBox(
       decoration: BoxDecoration(

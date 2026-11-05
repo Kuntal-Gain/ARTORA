@@ -1,16 +1,17 @@
 import 'dart:async';
 
+import 'package:artora/src/features/auth/presentation/providers/auth_providers.dart';
 import 'package:artora/src/imports/imports.dart';
 
 /// Branded launch screen: nebula backdrop, logo, tagline and a loading bar.
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   static const Duration _loadDuration = Duration(milliseconds: 4200);
 
@@ -27,6 +28,23 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _progress;
   Timer? _navigateTimer;
 
+  /// Resolved while the animation plays so there's no wait afterwards.
+  late final Future<String> _destination = _resolveDestination();
+
+  /// Active session → home (or profile setup if the profile is missing);
+  /// otherwise the onboarding flow. Any failure falls back to onboarding.
+  Future<String> _resolveDestination() async {
+    final auth = ref.read(authUsecaseProvider);
+    final signedIn = (await auth.isSignedIn()).dataOrNull ?? false;
+    if (!signedIn) return AppRoutes.onboarding;
+    final hasProfile = (await auth.hasProfile()).dataOrNull;
+    return switch (hasProfile) {
+      true => AppRoutes.home,
+      false => AppRoutes.profileSetup,
+      null => AppRoutes.onboarding,
+    };
+  }
+
   /// Staggers an animation over [begin]..[end] of the total timeline.
   CurvedAnimation _stage(double begin, double end, Curve curve) =>
       CurvedAnimation(
@@ -40,8 +58,9 @@ class _SplashScreenState extends State<SplashScreen>
     _controller = AnimationController(vsync: this, duration: _loadDuration)
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
-          _navigateTimer = Timer(_holdDuration, () {
-            if (mounted) context.go(AppRoutes.onboarding);
+          _navigateTimer = Timer(_holdDuration, () async {
+            final route = await _destination;
+            if (mounted) context.go(route);
           });
         }
       })
@@ -59,6 +78,7 @@ class _SplashScreenState extends State<SplashScreen>
     ).animate(_stage(0.4, 0.65, Curves.easeOutCubic));
     _progressFade = _stage(0.4, 0.55, Curves.easeOut);
     _progress = _stage(0.45, 1, Curves.easeInOut);
+    unawaited(_destination); // late final is lazy; start the session check now
     FlutterNativeSplash.remove();
   }
 

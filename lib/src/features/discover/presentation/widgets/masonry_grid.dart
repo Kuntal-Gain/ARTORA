@@ -36,13 +36,13 @@ class MasonryGrid<T> extends StatelessWidget {
     }
 
     Widget column(List<T> entries) => Column(
-      children: [
-        for (final (index, item) in entries.indexed) ...[
-          if (index > 0) AppSpacing.vGap(AppSpacing.ms),
-          itemBuilder(context, item),
-        ],
-      ],
-    );
+          children: [
+            for (final (index, item) in entries.indexed) ...[
+              if (index > 0) AppSpacing.vGap(AppSpacing.ms),
+              itemBuilder(context, item),
+            ],
+          ],
+        );
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,19 +65,19 @@ class MasonrySkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget column(List<double> heights) => Column(
-      children: [
-        for (final (index, height) in heights.indexed) ...[
-          if (index > 0) AppSpacing.vGap(AppSpacing.ms),
-          Container(
-            height: height.h,
-            decoration: const BoxDecoration(
-              color: AppColors.shimmer,
-              borderRadius: AppBorders.card,
-            ),
-          ),
-        ],
-      ],
-    );
+          children: [
+            for (final (index, height) in heights.indexed) ...[
+              if (index > 0) AppSpacing.vGap(AppSpacing.ms),
+              Container(
+                height: height.h,
+                decoration: const BoxDecoration(
+                  color: AppColors.shimmer,
+                  borderRadius: AppBorders.card,
+                ),
+              ),
+            ],
+          ],
+        );
 
     return Semantics(
       label: MaterialLocalizations.of(context).refreshIndicatorSemanticLabel,

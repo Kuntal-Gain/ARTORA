@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import 'package:artora/src/features/discover/presentation/screens/artwork_editor_screen.dart';
+import 'package:artora/src/features/discover/presentation/screens/artwork_image_preview_screen.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:artora/src/middleware/app_route_observer.dart';
@@ -39,12 +43,12 @@ final GoRouter appRouter = GoRouter(
         reverseTransitionDuration: const Duration(milliseconds: 400),
         transitionsBuilder: (context, animation, secondary, child) =>
             FadeTransition(
-              opacity: CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeInOut,
-              ),
-              child: child,
-            ),
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeInOut,
+          ),
+          child: child,
+        ),
       ),
     ),
     GoRoute(
@@ -66,6 +70,23 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.profileSetup,
       name: 'profileSetup',
       builder: (context, state) => const ProfileSetupScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.createArtwork,
+      name: 'createArtwork',
+      builder: (context, state) => const ArtworkEditorScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.editArtwork,
+      name: 'editArtwork',
+      builder: (context, state) =>
+          ArtworkEditorScreen(artworkId: state.pathParameters['id']),
+    ),
+    GoRoute(
+      path: AppRoutes.artworkPreview,
+      name: 'artworkPreview',
+      builder: (context, state) =>
+          ArtworkImagePreviewScreen(file: state.extra! as File),
     ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
@@ -114,8 +135,8 @@ final GoRouter appRouter = GoRouter(
       name: 'search',
       builder: (context, state) => SearchScreen(
         initialQuery: state.uri.queryParameters['q'] ?? '',
-        initialScope:
-            SearchScope.values.asNameMap()[state.uri.queryParameters['scope']] ??
+        initialScope: SearchScope.values
+                .asNameMap()[state.uri.queryParameters['scope']] ??
             SearchScope.all,
       ),
     ),

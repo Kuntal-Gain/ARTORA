@@ -8,6 +8,7 @@ abstract final class SupabaseTables {
   static const String profiles = 'profiles';
   static const String artworks = 'artworks';
   static const String categories = 'categories';
+  static const String artworkImages = 'artwork_images';
   static const String tags = 'tags';
   static const String artworkTags = 'artwork_tags';
   static const String likes = 'likes';

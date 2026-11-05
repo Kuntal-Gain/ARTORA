@@ -20,7 +20,7 @@ class AppShell extends StatelessWidget {
           index,
           initialLocation: index == navigationShell.currentIndex,
         ),
-        onCreate: ArtoraBottomNav.showCreateComingSoon,
+        onCreate: () => context.push(AppRoutes.createArtwork),
       ),
     );
   }

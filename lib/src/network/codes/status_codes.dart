@@ -36,13 +36,15 @@ abstract final class StatusCode {
   static const int gatewayTimeout = 504;
 
   static bool isSuccess(int? code) => code != null && code >= 200 && code < 300;
-  static bool isRedirect(int? code) => code != null && code >= 300 && code < 400;
+  static bool isRedirect(int? code) =>
+      code != null && code >= 300 && code < 400;
   static bool isClientError(int? code) =>
       code != null && code >= 400 && code < 500;
   static bool isServerError(int? code) => code != null && code >= 500;
 
   /// Parses codes that some SDKs expose as strings (e.g. `StorageException`).
-  static int? tryParse(String? code) => code == null ? null : int.tryParse(code);
+  static int? tryParse(String? code) =>
+      code == null ? null : int.tryParse(code);
 
   /// Default user-facing message for a status code.
   static String messageFor(int? code) => switch (code) {
@@ -50,7 +52,8 @@ abstract final class StatusCode {
         unauthorized => 'Your session has expired. Please sign in again.',
         forbidden => "You don't have permission to do that.",
         notFound => "We couldn't find what you were looking for.",
-        requestTimeout || gatewayTimeout =>
+        requestTimeout ||
+        gatewayTimeout =>
           'The request timed out. Please try again.',
         conflict => 'This conflicts with existing data.',
         payloadTooLarge => 'That file is too large.',

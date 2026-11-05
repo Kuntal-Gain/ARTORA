@@ -202,21 +202,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ),
                     child: switch (trending) {
                       RequestSuccess(:final data) => Wrap(
-                        spacing: AppSpacing.sm,
-                        runSpacing: AppSpacing.sm,
-                        children: [
-                          for (final tag in data)
-                            SelectablePill(
-                              label: '#$tag',
-                              selected: activeTag == tag,
-                              onTap: () => _submit(tag),
-                            ),
-                        ],
-                      ),
+                          spacing: AppSpacing.sm,
+                          runSpacing: AppSpacing.sm,
+                          children: [
+                            for (final tag in data)
+                              SelectablePill(
+                                label: '#$tag',
+                                selected: activeTag == tag,
+                                onTap: () => _submit(tag),
+                              ),
+                          ],
+                        ),
                       RequestFailure() => const SizedBox.shrink(),
                       RequestInitial() || RequestLoading() => SizedBox(
-                        height: 40.h,
-                      ),
+                          height: 40.h,
+                        ),
                     },
                   ),
                   if (_query.isNotEmpty) ...[
@@ -240,39 +240,41 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     return switch (results) {
       RequestInitial() || RequestLoading() => Padding(
-        padding: pagePadding.copyWith(top: AppSpacing.sm),
-        child: const MasonrySkeleton(),
-      ),
+          padding: pagePadding.copyWith(top: AppSpacing.sm),
+          child: const MasonrySkeleton(),
+        ),
       RequestFailure() => AppErrorPresets.network(
-        onRetry: () => _submit(_query),
-      ),
+          onRetry: () => _submit(_query),
+        ),
       RequestSuccess(:final data) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_scope == SearchScope.all)
-            Padding(
-              padding: pagePadding,
-              child: UnderlineTabs(
-                dense: true,
-                labels: [
-                  _countLabel(LocaleKeys.discover_artwork, data.artworks.length),
-                  _countLabel(LocaleKeys.discover_artists, data.artists.length),
-                  _countLabel(LocaleKeys.discover_tags, data.tags.length),
-                ],
-                selectedIndex: _resultTab.index - 1,
-                onSelected: (index) => setState(
-                  () => _resultTab = SearchScope.values[index + 1],
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_scope == SearchScope.all)
+              Padding(
+                padding: pagePadding,
+                child: UnderlineTabs(
+                  dense: true,
+                  labels: [
+                    _countLabel(
+                        LocaleKeys.discover_artwork, data.artworks.length),
+                    _countLabel(
+                        LocaleKeys.discover_artists, data.artists.length),
+                    _countLabel(LocaleKeys.discover_tags, data.tags.length),
+                  ],
+                  selectedIndex: _resultTab.index - 1,
+                  onSelected: (index) => setState(
+                    () => _resultTab = SearchScope.values[index + 1],
+                  ),
                 ),
               ),
+            AppSpacing.vGap(AppSpacing.md),
+            _ResultsBody(
+              results: data,
+              type: _scope == SearchScope.all ? _resultTab : _scope,
+              onTag: _submit,
             ),
-          AppSpacing.vGap(AppSpacing.md),
-          _ResultsBody(
-            results: data,
-            type: _scope == SearchScope.all ? _resultTab : _scope,
-            onTag: _submit,
-          ),
-        ],
-      ),
+          ],
+        ),
     };
   }
 
@@ -366,9 +368,9 @@ class _SearchInput extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     OutlineInputBorder border(Color color) => OutlineInputBorder(
-      borderRadius: AppBorders.md,
-      borderSide: BorderSide(color: color),
-    );
+          borderRadius: AppBorders.md,
+          borderSide: BorderSide(color: color),
+        );
 
     return TextField(
       controller: controller,

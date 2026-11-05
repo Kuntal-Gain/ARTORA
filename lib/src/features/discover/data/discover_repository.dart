@@ -11,7 +11,8 @@ abstract class DiscoverRepository {
 
   /// Ids of the artists the signed-in user follows.
   Future<Resource<Set<String>>> followingIds();
-  Future<Resource<void>> setFollowing(String artistId, {required bool following});
+  Future<Resource<void>> setFollowing(String artistId,
+      {required bool following});
   Future<Resource<void>> setLiked(String artworkId, {required bool liked});
   Future<Resource<void>> setBookmarked(
     String artworkId, {

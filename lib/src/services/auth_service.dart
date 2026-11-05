@@ -30,20 +30,21 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    return runTask(() async {
-      final response = await _supabaseClient.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
-      final user = response.user;
-      if (user == null) return null;
-      return {
-        'id': user.id,
-        'email': user.email,
-        'name': user.userMetadata?['name'] ?? '',
-        'photoUrl': user.userMetadata?['avatar_url'],
-      };
-    },
+    return runTask(
+      () async {
+        final response = await _supabaseClient.auth.signInWithPassword(
+          email: email,
+          password: password,
+        );
+        final user = response.user;
+        if (user == null) return null;
+        return {
+          'id': user.id,
+          'email': user.email,
+          'name': user.userMetadata?['name'] ?? '',
+          'photoUrl': user.userMetadata?['avatar_url'],
+        };
+      },
       operation: 'auth.login',
       category: LogCategory.auth,
       context: {'method': 'email'},
@@ -57,21 +58,22 @@ class AuthService {
     required String password,
     String? username,
   }) async {
-    return runTask(() async {
-      final response = await _supabaseClient.auth.signUp(
-        email: email,
-        password: password,
-        data: {'name': name, if (username != null) 'username': username},
-      );
-      final user = response.user;
-      if (user == null) return null;
-      return {
-        'id': user.id,
-        'email': user.email,
-        'name': name,
-        'photoUrl': user.userMetadata?['avatar_url'],
-      };
-    },
+    return runTask(
+      () async {
+        final response = await _supabaseClient.auth.signUp(
+          email: email,
+          password: password,
+          data: {'name': name, if (username != null) 'username': username},
+        );
+        final user = response.user;
+        if (user == null) return null;
+        return {
+          'id': user.id,
+          'email': user.email,
+          'name': name,
+          'photoUrl': user.userMetadata?['avatar_url'],
+        };
+      },
       operation: 'auth.signUp',
       category: LogCategory.auth,
       context: {'method': 'email'},
@@ -80,9 +82,10 @@ class AuthService {
   }
 
   FutureEither<void> forgotPassword({required String email}) async {
-    return runTask(() async {
-      await _supabaseClient.auth.resetPasswordForEmail(email);
-    },
+    return runTask(
+      () async {
+        await _supabaseClient.auth.resetPasswordForEmail(email);
+      },
       operation: 'auth.forgotPassword',
       category: LogCategory.auth,
       requiresNetwork: true,
@@ -90,9 +93,10 @@ class AuthService {
   }
 
   FutureEither<void> logout() async {
-    return runTask(() async {
-      await _supabaseClient.auth.signOut();
-    },
+    return runTask(
+      () async {
+        await _supabaseClient.auth.signOut();
+      },
       operation: 'auth.logout',
       category: LogCategory.auth,
       requiresNetwork: true,
@@ -100,18 +104,19 @@ class AuthService {
   }
 
   FutureEither<Map<String, dynamic>?> getCurrentUser() async {
-    return runTask(() async {
-      final session = _supabaseClient.auth.currentSession;
-      if (session == null) return null;
-      final user = session.user;
-      return {
-        'id': user.id,
-        'email': user.email,
-        'name': user.userMetadata?['name'] ?? '',
-        'username': user.userMetadata?['username'],
-        'photoUrl': user.userMetadata?['avatar_url'],
-      };
-    },
+    return runTask(
+      () async {
+        final session = _supabaseClient.auth.currentSession;
+        if (session == null) return null;
+        final user = session.user;
+        return {
+          'id': user.id,
+          'email': user.email,
+          'name': user.userMetadata?['name'] ?? '',
+          'username': user.userMetadata?['username'],
+          'photoUrl': user.userMetadata?['avatar_url'],
+        };
+      },
       operation: 'auth.getCurrentUser',
       category: LogCategory.auth,
     );

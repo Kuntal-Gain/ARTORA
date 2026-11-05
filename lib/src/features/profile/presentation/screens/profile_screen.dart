@@ -1,51 +1,38 @@
+import 'dart:ui' show lerpDouble;
+
 import 'package:artora/src/features/auth/model/user_model.dart';
+import 'package:artora/src/features/auth/presentation/providers/auth_providers.dart';
+import 'package:artora/src/features/discover/model/artwork_model.dart';
+import 'package:artora/src/features/discover/state/artwork_provider.dart';
 import 'package:artora/src/imports/imports.dart';
-import 'package:flutter/services.dart';
+import 'package:artora/src/services/supabase_storage_service.dart';
 
 /// Profile content only. Keep your existing bottom navigation in the parent.
 ///
-/// Pass resolved images (AssetImage / NetworkImage) when available. Until then,
-/// the cover, avatar, artworks and collections show styled placeholders.
+/// Shows the signed-in user's profile and artworks from the providers; images
+/// that are missing (or still loading) fall back to styled placeholders.
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({
     super.key,
-    this.user,
-    this.coverImage,
-    this.avatarImage,
-    this.artworkImages = const [],
-    this.collectionImages = const [],
-    this.artworksCount = 124,
-    this.followersCount = 12800,
-    this.followingCount = 328,
-    this.isVerified = true,
     // Space reserved so the last row clears the parent's floating bottom nav.
     this.bottomInset = 110,
+    this.showBack = false,
     this.onBack,
     this.onMore,
     this.onEditProfile,
     this.onEditAvatar,
     this.onArtworkTap,
-    this.onCollectionTap,
   });
 
-  final UserModel? user;
-  final ImageProvider? coverImage;
-  final ImageProvider? avatarImage;
-  final List<ImageProvider> artworkImages;
-  final List<ImageProvider> collectionImages;
-
-  final int artworksCount;
-  final int followersCount;
-  final int followingCount;
-  final bool isVerified;
   final double bottomInset;
 
+  /// Only for viewing another user's profile; the own-profile tab has no back.
+  final bool showBack;
   final VoidCallback? onBack;
   final VoidCallback? onMore;
   final VoidCallback? onEditProfile;
   final VoidCallback? onEditAvatar;
   final ValueChanged<int>? onArtworkTap;
-  final ValueChanged<int>? onCollectionTap;
 
   @override
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
@@ -55,36 +42,102 @@ enum _ProfileTab { artwork, collections }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   _ProfileTab _selectedTab = _ProfileTab.artwork;
+  final _scroll = ScrollController();
 
-  String get _displayName {
-    final value = widget.user?.displayName.trim();
-    return value == null || value.isEmpty ? 'Alex Rivera' : value;
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
   }
 
-  String get _username {
-    final value = widget.user?.username.trim();
-    return value == null || value.isEmpty ? 'alexart' : value;
+  // Scroll distance over which the app bar collapses (expanded 128 - toolbar 56).
+  static const _collapseRange = 72.0;
+
+  /// Avatar that shrinks and docks into the app bar next to the name.
+  Widget _floatingAvatar(BuildContext context) {
+    final status = MediaQuery.paddingOf(context).top;
+    return AnimatedBuilder(
+      animation: _scroll,
+      builder: (context, _) {
+        final offset = _scroll.hasClients ? _scroll.offset : 0.0;
+        final t = (offset / _collapseRange).clamp(0.0, 1.0);
+        final size = lerpDouble(96.r, 36.r, t)!;
+        final dockedLeft = widget.showBack ? 66.r : 20.r;
+        final left = lerpDouble(20.r, dockedLeft, t)!;
+        // Scrolls with content until it reaches the toolbar, then stays docked.
+        final top = status + (82.r - offset).clamp(10.r, double.infinity);
+        return Stack(
+          children: [
+            Positioned(
+              left: left,
+              top: top,
+              child: _ProfileAvatar(
+                size: size,
+                showBadge: t < 0.3,
+                image: _avatarImage,
+                onEdit: widget.onEditAvatar,
+              ),
+            ),
+            Positioned(
+              left: (widget.showBack ? 66.r : 20.r) + 36.r + 10.r,
+              right: 72.r,
+              top: status,
+              height: 56.r,
+              child: IgnorePointer(
+                child: Opacity(
+                  opacity: ((t - 0.6) / 0.4).clamp(0.0, 1.0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.titleMedium?.copyWith(
+                        color: _ProfileColors.text,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  String get _bio {
-    final value = widget.user?.bio?.trim();
-    return value == null || value.isEmpty
-        ? 'Digital artist creating dreamy worlds, expressive characters and vibrant illustrations.'
-        : value;
+  // Set at the top of build(); read by the scroll-driven avatar builder too.
+  UserModel? _user;
+
+  String get _displayName => _user?.displayName.trim() ?? '';
+
+  String get _username => _user?.username.trim() ?? '';
+
+  String? get _bio {
+    final value = _user?.bio?.trim();
+    return value == null || value.isEmpty ? null : value;
   }
 
-  List<String> get _specialties {
-    final values = widget.user?.specialties;
-    if (values == null || values.isEmpty) {
-      return const [
-        'Digital Painting',
-        'Character Design',
-        'Illustration',
-        'Concept Art',
-        'Fantasy Art',
-      ];
+  List<String> get _specialties =>
+      (_user?.specialties ?? const []).map(_titleCase).toList();
+
+  ImageProvider? _storageImage(String bucket, String? path) {
+    final url = SupabaseStorageService.instance.publicUrl(bucket, path);
+    return url == null ? null : NetworkImage(url);
+  }
+
+  ImageProvider? get _avatarImage =>
+      _storageImage(SupabaseBuckets.avatars, _user?.avatarPath);
+
+  ImageProvider? get _coverImage =>
+      _storageImage(SupabaseBuckets.banners, _user?.coverPath);
+
+  Future<void> _refresh() async {
+    final user = await ref.refresh(currentUserProvider.future);
+    if (user != null) {
+      await ref.read(userArtworkFeedProvider(user.id).notifier).refresh();
     }
-    return values.map(_titleCase).toList();
   }
 
   String _titleCase(String value) {
@@ -134,12 +187,70 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _user = ref.watch(currentUserProvider).value;
     final specialties = _specialties;
-    final isArtwork = _selectedTab == _ProfileTab.artwork;
-    final images = isArtwork ? widget.artworkImages : widget.collectionImages;
-    final itemCount = images.isEmpty ? (isArtwork ? 6 : 4) : images.length;
-    final onTap = isArtwork ? widget.onArtworkTap : widget.onCollectionTap;
-    final placeholderLabel = isArtwork ? 'ARTWORK' : 'COLLECTION';
+    final uid = _user?.id;
+    final feed = uid == null
+        ? const RequestLoading<ArtworkListModel>()
+        : ref.watch(userArtworkFeedProvider(uid));
+    final artworks = switch (feed) {
+      RequestSuccess(:final data) => data.artworks,
+      _ => const <ArtworkModel>[],
+    };
+
+    Widget message(String text) => SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 32.r),
+            child: Center(
+              child: Text(
+                text,
+                style: context.textTheme.bodyMedium?.copyWith(
+                  color: _ProfileColors.secondary,
+                ),
+              ),
+            ),
+          ),
+        );
+
+    final Widget gallery = _selectedTab == _ProfileTab.collections
+        ? message('No collections yet')
+        : switch (feed) {
+            RequestInitial() || RequestLoading() => SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32.r),
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+              ),
+            RequestFailure() => message('Could not load artworks'),
+            RequestSuccess() when artworks.isEmpty => message(
+                'No artworks yet',
+              ),
+            RequestSuccess() => SliverGrid.builder(
+                itemCount: artworks.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 10.r,
+                  crossAxisSpacing: 10.r,
+                  childAspectRatio: 1.45,
+                ),
+                itemBuilder: (context, index) {
+                  final art = artworks[index];
+                  final url = art.images.isEmpty
+                      ? null
+                      : (art.images.first.thumbnailUrl ?? art.images.first.url);
+                  return _GalleryTile(
+                    image:
+                        url == null || url.isEmpty ? null : NetworkImage(url),
+                    variant: index + 2,
+                    label: art.title,
+                    // Own profile: tapping a tile opens it for editing.
+                    onTap: widget.onArtworkTap == null
+                        ? () => context.push(AppRoutes.editArtworkPath(art.id))
+                        : () => widget.onArtworkTap!(index),
+                  );
+                },
+              ),
+          };
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
@@ -149,145 +260,145 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       child: Scaffold(
         backgroundColor: _ProfileColors.canvas,
-        body: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            // Full-bleed cover (extends under the status bar). Buttons float on it.
-            SliverAppBar(
-              pinned: true,
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              toolbarHeight: 56.r,
-              expandedHeight: 128.r, // status-bar inset is added automatically
-              backgroundColor: _ProfileColors.canvas,
-              surfaceTintColor: Colors.transparent,
-              automaticallyImplyLeading: false,
-              leadingWidth: 72.r,
-              leading: Padding(
-                padding: EdgeInsets.only(left: 18.r),
-                child: Center(
-                  child: _HeaderAction(
-                    icon: Icons.arrow_back_rounded,
-                    tooltip: 'Back',
-                    onTap: widget.onBack ??
-                        () => Navigator.of(context).maybePop(),
-                  ),
+        body: Stack(
+          children: [
+            RefreshIndicator(
+              color: _ProfileColors.accent,
+              backgroundColor: _ProfileColors.surface,
+              edgeOffset: MediaQuery.paddingOf(context).top + 56.r,
+              onRefresh: _refresh,
+              child: CustomScrollView(
+                controller: _scroll,
+                // No bounce at the top: pulling down there only triggers refresh.
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: ClampingScrollPhysics(),
                 ),
-              ),
-              actions: [
-                Padding(
-                  padding: EdgeInsets.only(right: 18.r),
-                  child: Center(
-                    child: _HeaderAction(
-                      icon: Icons.more_vert_rounded,
-                      tooltip: 'More options',
-                      onTap: widget.onMore,
-                    ),
-                  ),
-                ),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                collapseMode: CollapseMode.pin,
-                background: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    _ProfileMedia(
-                      image: widget.coverImage,
-                      variant: 0,
-                      icon: Icons.landscape_outlined,
-                      label: 'COVER IMAGE',
-                    ),
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          stops: [0, 0.35, 1],
-                          colors: [
-                            Color(0x66080611),
-                            Colors.transparent,
-                            Color(0x990B0A13),
-                          ],
+                slivers: [
+                  // Full-bleed cover (extends under the status bar). Buttons float on it.
+                  SliverAppBar(
+                    pinned: true,
+                    elevation: 0,
+                    scrolledUnderElevation: 0,
+                    toolbarHeight: 56.r,
+                    expandedHeight:
+                        128.r, // status-bar inset is added automatically
+                    backgroundColor: _ProfileColors.canvas,
+                    surfaceTintColor: Colors.transparent,
+                    automaticallyImplyLeading: false,
+                    leadingWidth: widget.showBack ? 72.r : 0,
+                    leading: widget.showBack
+                        ? Padding(
+                            padding: EdgeInsets.only(left: 18.r),
+                            child: Center(
+                              child: _HeaderAction(
+                                icon: Icons.arrow_back_rounded,
+                                tooltip: 'Back',
+                                onTap: widget.onBack ??
+                                    () => Navigator.of(context).maybePop(),
+                              ),
+                            ),
+                          )
+                        : null,
+                    actions: [
+                      Padding(
+                        padding: EdgeInsets.only(right: 18.r),
+                        child: Center(
+                          child: _HeaderAction(
+                            icon: Icons.more_vert_rounded,
+                            tooltip: 'More options',
+                            onTap: widget.onMore,
+                          ),
                         ),
                       ),
+                    ],
+                    flexibleSpace: FlexibleSpaceBar(
+                      collapseMode: CollapseMode.pin,
+                      background: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          _ProfileMedia(
+                            image: _coverImage,
+                            variant: 0,
+                            icon: Icons.landscape_outlined,
+                            label: 'COVER IMAGE',
+                          ),
+                          const DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                stops: [0, 0.35, 1],
+                                colors: [
+                                  Color(0x66080611),
+                                  Colors.transparent,
+                                  Color(0x990B0A13),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-              ),
-            ),
+                  ),
 
-            // Rounded profile card containing header, info and gallery.
-            DecoratedSliver(
-              decoration: BoxDecoration(
-                color: _ProfileColors.canvas,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
-                border: Border.all(color: _ProfileColors.cardBorder),
-              ),
-              sliver: SliverMainAxisGroup(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: _ProfileHeader(
-                      avatarImage: widget.avatarImage,
-                      onEditAvatar: widget.onEditAvatar,
-                      onEditProfile: widget.onEditProfile,
+                  // Rounded profile card containing header, info and gallery.
+                  DecoratedSliver(
+                    decoration: BoxDecoration(
+                      color: _ProfileColors.canvas,
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(28.r)),
+                      border: Border.all(color: _ProfileColors.cardBorder),
                     ),
-                  ),
-                  SliverPadding(
-                    padding: EdgeInsets.symmetric(horizontal: 20.r),
-                    sliver: SliverToBoxAdapter(
-                      child: _ProfileInfo(
-                        name: _displayName,
-                        username: _username,
-                        bio: _bio,
-                        isVerified: widget.isVerified,
-                        specialties: specialties,
-                        onShowSpecialties: () => _showSpecialties(specialties),
-                        artworks: widget.artworksCount,
-                        followers: widget.followersCount,
-                        following: widget.followingCount,
-                      ),
-                    ),
-                  ),
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(20.r, 16.r, 20.r, 0),
-                    sliver: SliverToBoxAdapter(
-                      child: _ProfileTabs(
-                        selected: _selectedTab,
-                        onSelected: (tab) {
-                          if (tab != _selectedTab) {
-                            setState(() => _selectedTab = tab);
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                  SliverPadding(
-                    padding: EdgeInsets.fromLTRB(
-                      20.r,
-                      14.r,
-                      20.r,
-                      widget.bottomInset.r,
-                    ),
-                    sliver: SliverGrid.builder(
-                      key: ValueKey(_selectedTab), // reset on tab switch
-                      itemCount: itemCount,
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 10.r,
-                        crossAxisSpacing: 10.r,
-                        childAspectRatio: 1.45,
-                      ),
-                      itemBuilder: (context, index) => _GalleryTile(
-                        image: images.isEmpty ? null : images[index],
-                        variant: index + 2,
-                        label: '$placeholderLabel ${index + 1}',
-                        onTap: onTap == null ? null : () => onTap(index),
-                      ),
+                    sliver: SliverMainAxisGroup(
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: _ProfileHeader(
+                            onEditProfile: widget.onEditProfile,
+                          ),
+                        ),
+                        SliverPadding(
+                          padding: EdgeInsets.symmetric(horizontal: 20.r),
+                          sliver: SliverToBoxAdapter(
+                            child: _ProfileInfo(
+                              name: _displayName,
+                              username: _username,
+                              bio: _bio,
+                              specialties: specialties,
+                              onShowSpecialties: () =>
+                                  _showSpecialties(specialties),
+                              artworks: artworks.length,
+                            ),
+                          ),
+                        ),
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(20.r, 16.r, 20.r, 0),
+                          sliver: SliverToBoxAdapter(
+                            child: _ProfileTabs(
+                              selected: _selectedTab,
+                              onSelected: (tab) {
+                                if (tab != _selectedTab) {
+                                  setState(() => _selectedTab = tab);
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(
+                            20.r,
+                            14.r,
+                            20.r,
+                            widget.bottomInset.r,
+                          ),
+                          sliver: gallery,
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
+            _floatingAvatar(context),
           ],
         ),
       ),
@@ -310,14 +421,8 @@ class _ProfileColors {
 
 /// Avatar (overlapping the cover) + Edit Profile button row.
 class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader({
-    this.avatarImage,
-    this.onEditAvatar,
-    this.onEditProfile,
-  });
+  const _ProfileHeader({this.onEditProfile});
 
-  final ImageProvider? avatarImage;
-  final VoidCallback? onEditAvatar;
   final VoidCallback? onEditProfile;
 
   @override
@@ -327,11 +432,6 @@ class _ProfileHeader extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(
-            left: 20.r,
-            top: -46.r,
-            child: _ProfileAvatar(image: avatarImage, onEdit: onEditAvatar),
-          ),
           Positioned(
             right: 20.r,
             top: 14.r,
@@ -348,23 +448,17 @@ class _ProfileInfo extends StatelessWidget {
     required this.name,
     required this.username,
     required this.bio,
-    required this.isVerified,
     required this.specialties,
     required this.onShowSpecialties,
     required this.artworks,
-    required this.followers,
-    required this.following,
   });
 
   final String name;
   final String username;
-  final String bio;
-  final bool isVerified;
+  final String? bio;
   final List<String> specialties;
   final VoidCallback onShowSpecialties;
   final int artworks;
-  final int followers;
-  final int following;
 
   @override
   Widget build(BuildContext context) {
@@ -385,11 +479,6 @@ class _ProfileInfo extends StatelessWidget {
                 ),
               ),
             ),
-            if (isVerified) ...[
-              SizedBox(width: 8.r),
-              Icon(Icons.verified_rounded,
-                  color: _ProfileColors.accent, size: 20.r),
-            ],
           ],
         ),
         SizedBox(height: 3.r),
@@ -400,33 +489,33 @@ class _ProfileInfo extends StatelessWidget {
             fontSize: 13.sp,
           ),
         ),
-        SizedBox(height: 10.r),
-        Text(
-          bio,
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
-          style: context.textTheme.bodyMedium?.copyWith(
-            color: _ProfileColors.description,
-            fontSize: 13.sp,
-            height: 1.45,
+        if (bio != null) ...[
+          SizedBox(height: 10.r),
+          Text(
+            bio!,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: context.textTheme.bodyMedium?.copyWith(
+              color: _ProfileColors.description,
+              fontSize: 13.sp,
+              height: 1.45,
+            ),
           ),
-        ),
-        SizedBox(height: 12.r),
-        Wrap(
-          spacing: 8.r,
-          runSpacing: 8.r,
-          children: [
-            for (final s in specialties.take(4)) _SpecialtyChip(label: s),
-            if (specialties.length > 4)
-              _SpecialtyChip(label: '+', onTap: onShowSpecialties),
-          ],
-        ),
+        ],
+        if (specialties.isNotEmpty) ...[
+          SizedBox(height: 12.r),
+          Wrap(
+            spacing: 8.r,
+            runSpacing: 8.r,
+            children: [
+              for (final s in specialties.take(4)) _SpecialtyChip(label: s),
+              if (specialties.length > 4)
+                _SpecialtyChip(label: '+', onTap: onShowSpecialties),
+            ],
+          ),
+        ],
         SizedBox(height: 16.r),
-        _ProfileStats(
-          artworks: artworks,
-          followers: followers,
-          following: following,
-        ),
+        _ProfileStats(artworks: artworks),
       ],
     );
   }
@@ -463,23 +552,31 @@ class _HeaderAction extends StatelessWidget {
 }
 
 class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({this.image, this.onEdit});
+  const _ProfileAvatar({
+    required this.size,
+    required this.showBadge,
+    this.image,
+    this.onEdit,
+  });
 
+  final double size;
+  final bool showBadge;
   final ImageProvider? image;
   final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
+    final s = size / 96.r;
     return SizedBox(
-      width: 100.r,
-      height: 100.r,
+      width: size,
+      height: size,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
-            width: 96.r,
-            height: 96.r,
-            padding: EdgeInsets.all(3.r),
+            width: size,
+            height: size,
+            padding: EdgeInsets.all(3.r * s),
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
@@ -489,7 +586,7 @@ class _ProfileAvatar extends StatelessWidget {
               ),
             ),
             child: Container(
-              padding: EdgeInsets.all(2.r),
+              padding: EdgeInsets.all(2.r * s),
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: _ProfileColors.canvas,
@@ -503,30 +600,31 @@ class _ProfileAvatar extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Material(
-              color: _ProfileColors.accent,
-              shape: CircleBorder(
-                side: BorderSide(color: _ProfileColors.canvas, width: 2.r),
-              ),
-              elevation: 2,
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: onEdit,
-                child: SizedBox(
-                  height: 32.r,
-                  width: 32.r,
-                  child: Icon(
-                    Icons.edit_rounded,
-                    size: 15.r,
-                    color: const Color(0xFF160D24),
+          if (showBadge)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Material(
+                color: _ProfileColors.accent,
+                shape: CircleBorder(
+                  side: BorderSide(color: _ProfileColors.canvas, width: 2.r),
+                ),
+                elevation: 2,
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: onEdit,
+                  child: SizedBox(
+                    height: 32.r,
+                    width: 32.r,
+                    child: Icon(
+                      Icons.edit_rounded,
+                      size: 15.r,
+                      color: const Color(0xFF160D24),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -603,44 +701,14 @@ class _SpecialtyChip extends StatelessWidget {
 }
 
 class _ProfileStats extends StatelessWidget {
-  const _ProfileStats({
-    required this.artworks,
-    required this.followers,
-    required this.following,
-  });
+  // Followers / following are omitted: the backend doesn't expose them yet.
+  const _ProfileStats({required this.artworks});
 
   final int artworks;
-  final int followers;
-  final int following;
-
-  static String _formatCount(int count) {
-    if (count >= 1000000) {
-      final v = count / 1000000;
-      return '${v.toStringAsFixed(count % 1000000 == 0 ? 0 : 1)}M';
-    }
-    if (count >= 1000) {
-      final v = count / 1000;
-      return '${v.toStringAsFixed(count % 1000 == 0 ? 0 : 1)}K';
-    }
-    return '$count';
-  }
 
   @override
-  Widget build(BuildContext context) {
-    final divider =
-        Container(width: 1, height: 34.r, color: _ProfileColors.separator);
-    return Row(
-      children: [
-        Expanded(child: _Stat(value: _formatCount(artworks), label: 'Artworks')),
-        divider,
-        Expanded(
-            child: _Stat(value: _formatCount(followers), label: 'Followers')),
-        divider,
-        Expanded(
-            child: _Stat(value: _formatCount(following), label: 'Following')),
-      ],
-    );
-  }
+  Widget build(BuildContext context) =>
+      _Stat(value: formatCompact(artworks), label: 'Artworks');
 }
 
 class _Stat extends StatelessWidget {

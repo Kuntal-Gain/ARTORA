@@ -48,15 +48,16 @@ class ExploreScreen extends ConsumerWidget {
               ),
               SliverToBoxAdapter(
                 child: switch (explore) {
-                  RequestInitial() || RequestLoading() =>
+                  RequestInitial() ||
+                  RequestLoading() =>
                     const _ExploreSkeleton(),
                   RequestFailure() => Padding(
-                    padding: EdgeInsets.only(top: AppSpacing.xl),
-                    child: AppErrorPresets.network(
-                      onRetry: () =>
-                          ref.read(exploreProvider.notifier).refresh(),
+                      padding: EdgeInsets.only(top: AppSpacing.xl),
+                      child: AppErrorPresets.network(
+                        onRetry: () =>
+                            ref.read(exploreProvider.notifier).refresh(),
+                      ),
                     ),
-                  ),
                   RequestSuccess(:final data) => _ExploreContent(content: data),
                 },
               ),
@@ -193,10 +194,11 @@ class _ExploreSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget box(double width, double height, BorderRadius radius) => Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(color: AppColors.shimmer, borderRadius: radius),
-    );
+          width: width,
+          height: height,
+          decoration:
+              BoxDecoration(color: AppColors.shimmer, borderRadius: radius),
+        );
 
     return Padding(
       padding: EdgeInsets.fromLTRB(

@@ -43,16 +43,22 @@ abstract final class PostgresErrorCode {
   /// Default user-facing message for a SQLSTATE code, or `null` if unmapped.
   static String? messageFor(String? code) => switch (code) {
         uniqueViolation => 'That already exists.',
-        foreignKeyViolation => 'This refers to something that no longer exists.',
+        foreignKeyViolation =>
+          'This refers to something that no longer exists.',
         notNullViolation => 'A required field is missing.',
-        checkViolation || invalidTextRepresentation ||
-        numericValueOutOfRange || invalidDatetimeFormat =>
+        checkViolation ||
+        invalidTextRepresentation ||
+        numericValueOutOfRange ||
+        invalidDatetimeFormat =>
           'Some of the information provided is invalid.',
         stringDataRightTruncation => 'One of the values is too long.',
         insufficientPrivilege => "You don't have permission to do that.",
-        serializationFailure || deadlockDetected =>
+        serializationFailure ||
+        deadlockDetected =>
           'The server is busy. Please try again.',
-        connectionException || connectionFailure || tooManyConnections ||
+        connectionException ||
+        connectionFailure ||
+        tooManyConnections ||
         insufficientResources =>
           'The service is temporarily unavailable. Please try again.',
         queryCanceled => 'The request took too long. Please try again.',
@@ -85,7 +91,8 @@ abstract final class PostgrestErrorCode {
 
   static String? messageFor(String? code) => switch (code) {
         noRowsOrMultiple => "We couldn't find what you were looking for.",
-        jwtExpired || anonymousDisabled =>
+        jwtExpired ||
+        anonymousDisabled =>
           'Your session has expired. Please sign in again.',
         _ => null,
       };

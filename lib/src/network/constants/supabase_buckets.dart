@@ -30,7 +30,7 @@ abstract final class StorageLimits {
   StorageLimits._();
 
   static const int maxAvatarBytes = 2 * 1024 * 1024;
-  static const int maxArtworkBytes = 10 * 1024 * 1024;
+  static const int maxArtworkBytes = 20 * 1024 * 1024;
   static const List<String> imageMimeTypes = [
     'image/jpeg',
     'image/png',

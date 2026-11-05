@@ -6,8 +6,8 @@ class RecentSearchStore {
   static const int maxEntries = 10;
 
   List<String> read() => List<String>.from(
-    HiveService.instance.get<List<dynamic>>(_key) ?? const <dynamic>[],
-  );
+        HiveService.instance.get<List<dynamic>>(_key) ?? const <dynamic>[],
+      );
 
   Future<void> write(List<String> entries) =>
       HiveService.instance.put(_key, entries);
