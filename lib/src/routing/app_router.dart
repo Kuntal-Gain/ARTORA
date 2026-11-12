@@ -1,6 +1,8 @@
 import 'dart:io';
 
+import 'package:artora/src/features/discover/presentation/screens/artwork_detail_screen.dart';
 import 'package:artora/src/features/discover/presentation/screens/artwork_editor_screen.dart';
+import 'package:artora/src/features/discover/presentation/screens/comments_screen.dart';
 import 'package:artora/src/features/discover/presentation/screens/artwork_image_preview_screen.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
@@ -87,6 +89,18 @@ final GoRouter appRouter = GoRouter(
       name: 'artworkPreview',
       builder: (context, state) =>
           ArtworkImagePreviewScreen(file: state.extra! as File),
+    ),
+    GoRoute(
+      path: AppRoutes.artworkDetail,
+      name: 'artworkDetail',
+      builder: (context, state) =>
+          ArtworkDetailScreen(artworkId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: AppRoutes.artworkComments,
+      name: 'artworkComments',
+      builder: (context, state) =>
+          CommentsScreen(artworkId: state.pathParameters['id']!),
     ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>

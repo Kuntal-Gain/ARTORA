@@ -1,3 +1,4 @@
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../config/app_config.dart';
@@ -9,38 +10,73 @@ import '../resource/resource.dart';
 /// A row as returned by PostgREST.
 typedef SBRow = Map<String, dynamic>;
 
-/// Adds extra PostgREST filters (`.gt`, `.inFilter`, `.ilike`, `.or`…) on top of
-/// the simple `eq` map.
+/// Adds extra PostgREST filters (`.gt`, `.inFilter`, `.ilike`, `.or`…)
+/// on top of the simple `eq` map.
 typedef SBFilter<T> = PostgrestFilterBuilder<T> Function(
   PostgrestFilterBuilder<T> query,
 );
 
+/// Adds additional filters to a Supabase Realtime stream.
+typedef SBStreamFilter = SupabaseStreamFilterBuilder Function(
+  SupabaseStreamFilterBuilder query,
+);
+
+/// Callback for a Postgres database change.
+typedef SBChangeCallback = void Function(
+  PostgresChangePayload payload,
+);
+
+/// Callback for Realtime subscription status changes.
+typedef SBStatusCallback = void Function(
+  RealtimeSubscribeStatus status,
+  Object? error,
+);
+
 /// Single entry point for Supabase data access.
 ///
-/// Every call returns a [Resource] — errors are mapped to typed `Failure`s,
-/// logged and network-checked by `runTask`, and never thrown.
+/// CRUD and RPC calls return [Resource].
+/// Errors are mapped to typed Failures and handled through runTask.
 ///
-/// ```dart
-/// final res = await SBClient.instance.get(
+/// Realtime operations expose native Streams and RealtimeChannels.
+///
+/// Example:
+///
+/// final result = await SBClient.instance.get(
 ///   SupabaseTables.artworks,
 ///   eq: {'user_id': uid},
 ///   orderBy: 'created_at',
 ///   limit: 20,
 /// );
-/// res.when(loading: ..., success: (rows) => ..., error: (f) => ...);
-/// ```
+///
+/// result.when(
+///   loading: ...,
+///   success: (rows) => ...,
+///   error: (failure) => ...,
+/// );
+///
+/// Realtime:
+///
+/// final stream = SBClient.instance.watch(
+///   SupabaseTables.artworks,
+///   primaryKey: ['id'],
+///   eq: {'user_id': uid},
+/// );
 class SBClient {
   SBClient._();
+
   static final SBClient instance = SBClient._();
 
   SupabaseClient get _client => AppConfig.supabase;
 
-  // ── GET ───────────────────────────────────────────────────────────────────
+  int _realtimeChannelId = 0;
+
+  // ── GET ─────────────────────────────────────────────────────
 
   /// Selects rows from [table].
   ///
-  /// [eq] adds equality filters; [filter] adds any other PostgREST filter.
-  /// Use [limit] with [offset] for pagination.
+  /// [eq] adds equality filters.
+  /// [filter] adds additional PostgREST filters.
+  /// [limit] with [offset] supports pagination.
   Future<Resource<List<SBRow>>> get(
     String table, {
     String columns = '*',
@@ -55,25 +91,47 @@ class SBClient {
       'get',
       table,
       () async {
-        var query = _applyEq(_client.from(table).select(columns), eq);
-        if (filter != null) query = filter(query);
+        var query = _applyEq(
+          _client.from(table).select(columns),
+          eq,
+        );
+
+        if (filter != null) {
+          query = filter(query);
+        }
 
         PostgrestTransformBuilder<PostgrestList> ordered = query;
+
         if (orderBy != null) {
-          ordered = query.order(orderBy, ascending: ascending);
+          ordered = query.order(
+            orderBy,
+            ascending: ascending,
+          );
         }
+
         if (limit != null) {
-          ordered = ordered.range(offset, offset + limit - 1);
+          ordered = ordered.range(
+            offset,
+            offset + limit - 1,
+          );
         }
 
         final rows = await ordered;
+
         return List<SBRow>.from(rows);
       },
-      {'columns': columns, 'eq': eq, 'limit': limit, 'offset': offset},
+      {
+        'columns': columns,
+        'eq': eq,
+        'limit': limit,
+        'offset': offset,
+      },
     );
   }
 
-  /// Selects a single row. Yields a `NotFoundFailure` when nothing matches.
+  /// Selects a single row.
+  ///
+  /// Returns NotFoundFailure when no matching row exists.
   Future<Resource<SBRow>> getOne(
     String table, {
     String columns = '*',
@@ -84,23 +142,34 @@ class SBClient {
       'getOne',
       table,
       () async {
-        var query = _applyEq(_client.from(table).select(columns), eq);
-        if (filter != null) query = filter(query);
+        var query = _applyEq(
+          _client.from(table).select(columns),
+          eq,
+        );
+
+        if (filter != null) {
+          query = filter(query);
+        }
 
         final row = await query.maybeSingle();
+
         if (row == null) {
           throw const NotFoundFailure(
             "We couldn't find what you were looking for.",
             statusCode: 404,
           );
         }
+
         return SBRow.from(row);
       },
-      {'columns': columns, 'eq': eq},
+      {
+        'columns': columns,
+        'eq': eq,
+      },
     );
   }
 
-  /// Counts rows matching [eq] / [filter] without fetching them.
+  /// Counts matching rows.
   Future<Resource<int>> count(
     String table, {
     Map<String, Object?>? eq,
@@ -110,44 +179,74 @@ class SBClient {
       'count',
       table,
       () async {
-        var query = _applyEq(_client.from(table).select(), eq);
-        if (filter != null) query = filter(query);
-        return query.count(CountOption.exact).then((r) => r.count);
+        var query = _applyEq(
+          _client.from(table).select(),
+          eq,
+        );
+
+        if (filter != null) {
+          query = filter(query);
+        }
+
+        final response = await query.count(
+          CountOption.exact,
+        );
+
+        return response.count;
       },
       {'eq': eq},
     );
   }
 
-  // ── POST (insert) ─────────────────────────────────────────────────────────
+  // ── POST (INSERT) ───────────────────────────────────────────
 
-  /// Inserts one row and returns it.
-  Future<Resource<SBRow>> post(String table, SBRow values) {
+  /// Inserts one row and returns the inserted row.
+  Future<Resource<SBRow>> post(
+    String table,
+    SBRow values,
+  ) {
     return _run(
       'post',
       table,
-      () async => SBRow.from(
-        await _client.from(table).insert(values).select().single(),
-      ),
+      () async {
+        final row = await _client
+            .from(table)
+            .insert(values)
+            .select()
+            .single();
+
+        return SBRow.from(row);
+      },
       {'keys': values.keys.toList()},
     );
   }
 
-  /// Inserts many rows and returns them.
-  Future<Resource<List<SBRow>>> postMany(String table, List<SBRow> values) {
+  /// Inserts multiple rows and returns the inserted rows.
+  Future<Resource<List<SBRow>>> postMany(
+    String table,
+    List<SBRow> values,
+  ) {
     return _run(
       'postMany',
       table,
-      () async => List<SBRow>.from(
-        await _client.from(table).insert(values).select(),
-      ),
+      () async {
+        final rows = await _client
+            .from(table)
+            .insert(values)
+            .select();
+
+        return List<SBRow>.from(rows);
+      },
       {'count': values.length},
     );
   }
 
-  // ── PUT (upsert) ──────────────────────────────────────────────────────────
+  // ── PUT (UPSERT) ────────────────────────────────────────────
 
-  /// Inserts or updates a row, resolving conflicts on [onConflict]
-  /// (comma-separated column names; defaults to the primary key).
+  /// Inserts or updates a row.
+  ///
+  /// [onConflict] specifies conflict columns.
+  /// Defaults to the table's primary key.
   Future<Resource<SBRow>> put(
     String table,
     SBRow values, {
@@ -156,22 +255,31 @@ class SBClient {
     return _run(
       'put',
       table,
-      () async => SBRow.from(
-        await _client
+      () async {
+        final row = await _client
             .from(table)
-            .upsert(values, onConflict: onConflict)
+            .upsert(
+              values,
+              onConflict: onConflict,
+            )
             .select()
-            .single(),
-      ),
-      {'keys': values.keys.toList(), 'onConflict': onConflict},
+            .single();
+
+        return SBRow.from(row);
+      },
+      {
+        'keys': values.keys.toList(),
+        'onConflict': onConflict,
+      },
     );
   }
 
-  // ── PATCH (update) ────────────────────────────────────────────────────────
+  // ── PATCH (UPDATE) ─────────────────────────────────────────
 
-  /// Updates rows matching [eq] / [filter] and returns them.
+  /// Updates rows matching [eq] or [filter].
   ///
-  /// At least one filter is required so a bug can never update a whole table.
+  /// Requires at least one filter to prevent accidental
+  /// updates across the entire table.
   Future<Resource<List<SBRow>>> patch(
     String table,
     SBRow values, {
@@ -179,45 +287,70 @@ class SBClient {
     SBFilter<dynamic>? filter,
   }) {
     _requireFilter(eq, filter);
+
     return _run(
       'patch',
       table,
       () async {
-        var query = _applyEq(_client.from(table).update(values), eq);
-        if (filter != null) query = filter(query);
-        return List<SBRow>.from(await query.select());
+        var query = _applyEq(
+          _client.from(table).update(values),
+          eq,
+        );
+
+        if (filter != null) {
+          query = filter(query);
+        }
+
+        final rows = await query.select();
+
+        return List<SBRow>.from(rows);
       },
-      {'keys': values.keys.toList(), 'eq': eq},
+      {
+        'keys': values.keys.toList(),
+        'eq': eq,
+      },
     );
   }
 
-  // ── DELETE ────────────────────────────────────────────────────────────────
+  // ── DELETE ─────────────────────────────────────────────────
 
-  /// Deletes rows matching [eq] / [filter] and returns the deleted rows.
+  /// Deletes rows matching [eq] or [filter].
   ///
-  /// At least one filter is required so a bug can never wipe a whole table.
+  /// Requires at least one filter to prevent accidental
+  /// deletion of the entire table.
   Future<Resource<List<SBRow>>> delete(
     String table, {
     Map<String, Object?>? eq,
     SBFilter<dynamic>? filter,
   }) {
     _requireFilter(eq, filter);
+
     return _run(
       'delete',
       table,
       () async {
-        var query = _applyEq(_client.from(table).delete(), eq);
-        if (filter != null) query = filter(query);
-        return List<SBRow>.from(await query.select());
+        var query = _applyEq(
+          _client.from(table).delete(),
+          eq,
+        );
+
+        if (filter != null) {
+          query = filter(query);
+        }
+
+        final rows = await query.select();
+
+        return List<SBRow>.from(rows);
       },
       {'eq': eq},
     );
   }
 
-  // ── RPC ───────────────────────────────────────────────────────────────────
+  // ── RPC ────────────────────────────────────────────────────
 
-  /// Calls a Postgres function and returns its result as [T]
-  /// (a row, a list of rows, or a scalar).
+  /// Calls a PostgreSQL function.
+  ///
+  /// [T] can be a row, list of rows, or scalar value.
   Future<Resource<T>> rpc<T>(
     String function, {
     Map<String, dynamic>? params,
@@ -225,13 +358,184 @@ class SBClient {
     return _run(
       'rpc',
       function,
-      () async => await _client.rpc<dynamic>(function, params: params) as T,
+      () async {
+        final result = await _client.rpc<dynamic>(
+          function,
+          params: params,
+        );
+
+        return result as T;
+      },
       {'params': params?.keys.toList()},
     );
   }
 
-  // ── Internals ─────────────────────────────────────────────────────────────
+  // ── REALTIME: WATCH ────────────────────────────────────────
 
+  /// Watches a table and emits its current rows and future changes.
+  ///
+  /// Fetches initial data automatically.
+  ///
+  /// Realtime changes are reflected in subsequent stream emissions.
+  ///
+  /// [primaryKey] identifies records for update/delete reconciliation.
+  /// [eq] applies equality filters.
+  /// [filter] applies additional supported stream filters.
+  ///
+  /// Important:
+  /// The stream must be created once and reused rather than
+  /// recreated during every Flutter widget rebuild.
+  ///
+  /// Example:
+  ///
+  /// final stream = SBClient.instance.watch(
+  ///   'artworks',
+  ///   primaryKey: ['id'],
+  ///   eq: {'user_id': userId},
+  ///   orderBy: 'created_at',
+  ///   ascending: false,
+  ///   limit: 20,
+  /// );
+  Stream<List<SBRow>> watch(
+    String table, {
+    required List<String> primaryKey,
+    Map<String, Object?>? eq,
+    SBStreamFilter? filter,
+    String? orderBy,
+    bool ascending = true,
+    int? limit,
+  }) {
+    if (primaryKey.isEmpty) {
+      throw ArgumentError(
+        'SBClient.watch requires at least one primary key.',
+      );
+    }
+
+    if (limit != null && limit <= 0) {
+      throw ArgumentError.value(
+        limit,
+        'limit',
+        'Limit must be greater than zero.',
+      );
+    }
+
+    var query = _client.from(table).stream(
+      primaryKey: primaryKey,
+    );
+
+    if (eq != null) {
+      for (final entry in eq.entries) {
+        final value = entry.value;
+
+        query = value == null
+            ? query.isFilter(entry.key, null)
+            : query.eq(entry.key, value);
+      }
+    }
+
+    if (filter != null) {
+      query = filter(query);
+    }
+
+    SupabaseStreamBuilder result = query;
+
+    if (orderBy != null) {
+      result = result.order(
+        orderBy,
+        ascending: ascending,
+      );
+    }
+
+    if (limit != null) {
+      result = result.limit(limit);
+    }
+
+    return result;
+  }
+
+  // ── REALTIME: SUBSCRIBE ────────────────────────────────────
+
+  /// Subscribes to PostgreSQL database changes.
+  ///
+  /// Supported events:
+  /// - PostgresChangeEvent.all
+  /// - PostgresChangeEvent.insert
+  /// - PostgresChangeEvent.update
+  /// - PostgresChangeEvent.delete
+  ///
+  /// [onChange] receives database change payloads.
+  /// [onStatus] receives subscription lifecycle events.
+  ///
+  /// Returns a [RealtimeChannel] which must be removed
+  /// using [unsubscribeChanges] when no longer required.
+  ///
+  /// Unlike [watch], this does not fetch initial rows.
+  ///
+  /// Example:
+  ///
+  /// final channel = SBClient.instance.subscribeChanges(
+  ///   'artworks',
+  ///   event: PostgresChangeEvent.insert,
+  ///   onChange: (payload) {
+  ///     print(payload.newRecord);
+  ///   },
+  /// );
+  RealtimeChannel subscribeChanges(
+    String table, {
+    String schema = 'public',
+    String? channelName,
+    PostgresChangeEvent event = PostgresChangeEvent.all,
+    PostgresChangeFilter? filter,
+    required SBChangeCallback onChange,
+    SBStatusCallback? onStatus,
+  }) {
+    final topic = channelName ??
+        'sb:$schema:$table:${_realtimeChannelId++}';
+
+    final channel = _client.channel(topic);
+
+    channel
+        .onPostgresChanges(
+          event: event,
+          schema: schema,
+          table: table,
+          filter: filter,
+          callback: onChange,
+        )
+        .subscribe((status, [error]) {
+          onStatus?.call(status, error);
+        });
+
+    return channel;
+  }
+
+  // ── REALTIME: UNSUBSCRIBE ──────────────────────────────────
+
+  /// Unsubscribes and removes a Realtime channel.
+  ///
+  /// Call this when a screen/controller is disposed.
+  Future<void> unsubscribeChanges(
+    RealtimeChannel channel,
+  ) async {
+    await _client.removeChannel(channel);
+  }
+
+  /// Removes all Realtime channels belonging to the client.
+  ///
+  /// Useful during logout or a full application reset.
+  ///
+  /// Warning:
+  /// This also removes channels created outside SBClient,
+  /// including active watch() stream channels.
+  Future<void> unsubscribeAll() async {
+    await _client.removeAllChannels();
+  }
+
+  // ── INTERNALS ──────────────────────────────────────────────
+
+  /// Executes a one-shot Supabase operation through runTask.
+  ///
+  /// Maps failures, checks connectivity and records logs.
   Future<Resource<T>> _run<T>(
     String operation,
     String target,
@@ -242,25 +546,57 @@ class SBClient {
       action,
       operation: 'sb.$operation',
       category: LogCategory.database,
-      context: {'target': target, ...context},
+      context: {
+        'target': target,
+        ...context,
+      },
       requiresNetwork: true,
     );
+
     return Resource.fromEither(result);
   }
 
+  /// Applies equality filters to a PostgREST query.
+  ///
+  /// Supports null using SQL IS NULL semantics.
   static B _applyEq<B extends PostgrestFilterBuilder<dynamic>>(
     B query,
     Map<String, Object?>? eq,
   ) {
     var q = query;
-    eq?.forEach((column, value) => q = q.eq(column, value as Object) as B);
+
+    if (eq == null || eq.isEmpty) {
+      return q;
+    }
+
+    for (final entry in eq.entries) {
+      final value = entry.value;
+
+      if (value == null) {
+        q = q.isFilter(entry.key, null) as B;
+      } else {
+        q = q.eq(entry.key, value) as B;
+      }
+    }
+
     return q;
   }
 
-  static void _requireFilter(Map<String, Object?>? eq, Object? filter) {
-    assert(
-      (eq != null && eq.isNotEmpty) || filter != null,
-      'SBClient: patch/delete require at least one filter.',
-    );
+  /// Prevents unfiltered update/delete operations.
+  ///
+  /// Uses a runtime validation rather than assert so the
+  /// protection also works in release builds.
+  static void _requireFilter(
+    Map<String, Object?>? eq,
+    Object? filter,
+  ) {
+    final hasEq = eq != null && eq.isNotEmpty;
+    final hasFilter = filter != null;
+
+    if (!hasEq && !hasFilter) {
+      throw ArgumentError(
+        'SBClient: patch/delete require at least one filter.',
+      );
+    }
   }
 }

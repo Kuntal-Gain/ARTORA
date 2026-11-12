@@ -4,6 +4,7 @@ import 'package:artora/src/features/discover/data/discover_usecase.dart';
 import 'package:artora/src/features/discover/data/discover_usecase_impl.dart';
 import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/model/artwork_req_model.dart';
+import 'package:artora/src/features/discover/presentation/providers/discover_providers.dart';
 import 'package:artora/src/imports/imports.dart';
 
 // ── USECASE ─────────────────────────────────────────────────
@@ -89,6 +90,36 @@ final userLikedArtworksProvider = StateNotifierProvider.autoDispose.family<
   },
 );
 
+
+// ── TOGGLE ARTWORK LIKE ─────────────────────────────────────
+
+
+final toggleArtworkLikeProvider = StateNotifierProvider.autoDispose
+    .family<ArtworkActionNotifier, RequestState<void>, String>(
+  (ref, artworkId) {
+    final usecase = ref.read(discoverUsecaseProvider);
+
+    return ArtworkActionNotifier(
+      () => usecase.toggleLike(artworkId),
+      onSuccess: () {
+        // Actual providers used by HomeFeedScreen.
+        ref.invalidate(feedProvider);
+        ref.invalidate(followingFeedProvider);
+
+        // Other discover feeds.
+        ref.invalidate(publicArtworkFeedProvider);
+        ref.invalidate(userArtworkFeedProvider);
+        ref.invalidate(userLikedArtworksProvider);
+        ref.invalidate(userSavedArtworksProvider);
+
+        // Artwork details.
+        ref.invalidate(singleArtworkProvider(artworkId));
+      },
+    );
+  },
+);
+
+
 // ── USER SAVED ARTWORKS ─────────────────────────────────────
 
 final userSavedArtworksProvider = StateNotifierProvider.autoDispose.family<
@@ -115,6 +146,15 @@ final singleArtworkProvider = StateNotifierProvider.autoDispose.family<
       () => usecase.getSinglePost(postId),
     );
   },
+);
+
+// ── ARTWORK DETAIL (WITH ARTIST) ────────────────────────────
+
+final artworkDetailProvider = StateNotifierProvider.autoDispose.family<
+    DiscoverFetchNotifier<ArtworkModel>, RequestState<ArtworkModel>, String>(
+  (ref, postId) => DiscoverFetchNotifier(
+    () => ref.watch(discoverUsecaseProvider).fetchPostById(postId),
+  ),
 );
 
 // ── POST ARTWORK NOTIFIER ───────────────────────────────────
@@ -187,6 +227,7 @@ final updateArtworkProvider = StateNotifierProvider.autoDispose
         ref.invalidate(publicArtworkFeedProvider);
         ref.invalidate(userArtworkFeedProvider);
         ref.invalidate(singleArtworkProvider(artworkId));
+        ref.invalidate(artworkDetailProvider(artworkId));
       },
     );
   },
@@ -269,24 +310,6 @@ final deleteArtworkProvider = StateNotifierProvider.autoDispose
   },
 );
 
-// ── TOGGLE ARTWORK LIKE ─────────────────────────────────────
-
-final toggleArtworkLikeProvider = StateNotifierProvider.autoDispose
-    .family<ArtworkActionNotifier, RequestState<void>, String>(
-  (ref, artworkId) {
-    final usecase = ref.watch(discoverUsecaseProvider);
-
-    return ArtworkActionNotifier(
-      () => usecase.toggleLike(artworkId),
-      onSuccess: () {
-        ref.invalidate(publicArtworkFeedProvider);
-        ref.invalidate(userArtworkFeedProvider);
-        ref.invalidate(userLikedArtworksProvider);
-        ref.invalidate(singleArtworkProvider(artworkId));
-      },
-    );
-  },
-);
 
 // ── TOGGLE ARTWORK SAVE ─────────────────────────────────────
 

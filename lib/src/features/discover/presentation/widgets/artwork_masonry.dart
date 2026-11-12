@@ -30,9 +30,10 @@ class ArtworkMasonry extends ConsumerWidget {
       footerExtent: showFollow ? 0.4 : 0.3,
       itemBuilder: (context, artwork) => ArtworkTile(
         artwork: artwork,
+        onTap: () => context.push(AppRoutes.artworkDetailPath(artwork.id)),
         isLiked: liked.contains(artwork.id),
         isBookmarked: bookmarked.contains(artwork.id),
-        onLike: () => ref.read(likedProvider.notifier).toggle(artwork.id),
+        onLike: () => toggleLikeOptimistic(ref, artwork.id),
         onBookmark: () =>
             ref.read(bookmarkedProvider.notifier).toggle(artwork.id),
         isFollowing: showFollow ? following.contains(artwork.artist.id) : null,

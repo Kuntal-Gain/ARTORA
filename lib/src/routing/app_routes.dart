@@ -23,6 +23,14 @@ abstract final class AppRoutes {
   static const String editArtwork = '/artwork/:id/edit';
   static String editArtworkPath(String id) => '/artwork/$id/edit';
 
+  /// Post view; declared after `new` / `preview` so those still match first.
+  static const String artworkDetail = '/artwork/:id';
+  static String artworkDetailPath(String id) => '/artwork/$id';
+
+  /// Full comments page for an artwork.
+  static const String artworkComments = '/artwork/:id/comments';
+  static String artworkCommentsPath(String id) => '/artwork/$id/comments';
+
   /// Image preview; pass the picked `File` as `extra`, pops with the result.
   static const String artworkPreview = '/artwork/preview';
 

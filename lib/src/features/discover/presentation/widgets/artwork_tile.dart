@@ -31,7 +31,7 @@ class ArtworkTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final textTheme = context.textTheme;
-    final likes = artwork.likes + (isLiked ? 1 : 0);
+    final likes = artwork.likes; // server count, kept live by realtime
     final following = isFollowing;
 
     return Material(

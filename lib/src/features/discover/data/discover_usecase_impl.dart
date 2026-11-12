@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:artora/src/features/discover/data/discover_usecase.dart';
 import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/model/artwork_req_model.dart';
+import 'package:artora/src/features/discover/model/comment_model.dart';
 import 'package:artora/src/network/client/sb_client.dart';
 import 'package:artora/src/network/constants/supabase_tables.dart';
 import 'package:artora/src/network/failures/failure.dart';
@@ -14,10 +15,12 @@ import 'package:artora/src/services/supabase_storage_service.dart';
 class DiscoverUsecaseImpl implements DiscoverUsecase {
   static const int _pageSize = 20;
 
-  static const String _artworkColumns = '*,category:categories(id,name,slug),'
+  static const String _artworkColumns = '*,likes_count:likes(count),'
+      'comments_count:comments(count),'
+      'category:categories(id,name,slug),'
       'images:artwork_images(image_url,thumbnail_url,mime_type,size,position)';
 
-  static const String _likesTable = 'artwork_likes';
+  static const String _likesTable = 'likes';
   static const String _bookmarksTable = 'artwork_bookmarks';
 
   SBClient get _db => SBClient.instance;
@@ -103,6 +106,256 @@ class DiscoverUsecaseImpl implements DiscoverUsecase {
         Resource<ArtworkModel>.error(failure),
       ResourceLoading<SBRow>() => const Resource<ArtworkModel>.loading(),
     };
+  }
+
+  // ── FETCH POST BY ID (WITH ARTIST) ───────────────────────
+
+  static const String _profileColumns =
+      'id,username,display_name,bio,avatar_path,cover_path,'
+      'website_url,social_links,specialties';
+
+  /// Two queries, not an embedded join: PostgREST can only embed `profiles`
+  /// when `artworks.user_id` has a foreign key to it, and ours doesn't.
+  @override
+  Future<Resource<ArtworkModel>> fetchPostById(String postId) async {
+    final result = await _db.getOne(
+      SupabaseTables.artworks,
+      columns: _artworkColumns,
+      eq: {'id': postId},
+    );
+
+    return switch (result) {
+      ResourceSuccess<SBRow>(:final data) => _withProfile(data),
+      ResourceError<SBRow>(:final failure) =>
+        Resource<ArtworkModel>.error(failure),
+      ResourceLoading<SBRow>() => const Resource<ArtworkModel>.loading(),
+    };
+  }
+
+  Future<Resource<ArtworkModel>> _withProfile(SBRow artwork) async {
+    final profile = await _db.getOne(
+      SupabaseTables.profiles,
+      columns: _profileColumns,
+      eq: {'id': artwork['user_id']},
+    );
+    // A missing profile shouldn't hide the artwork; the artist row just stays off.
+    final row = switch (profile) {
+      ResourceSuccess<SBRow>(:final data) => {
+          ...artwork,
+          'profile': {
+            ...data,
+            'avatar_url': _storage.publicUrl(
+              SupabaseBuckets.avatars,
+              data['avatar_path'] as String?,
+            ),
+          },
+        },
+      _ => artwork,
+    };
+    return (await _attachViewerState([row])).map(
+      (rows) => ArtworkModel.fromJson(rows.first),
+    );
+  }
+
+  // ── COMMENTS ─────────────────────────────────────────────
+  // Needs supabase/comments.sql (table, FK to profiles, RLS, realtime).
+
+  static const String _commentLikesTable = 'comment_likes';
+
+  static const String _commentColumns =
+      'id,artwork_id,user_id,parent_id,content,created_at,'
+      // `!comments_user_id_fkey` picks the author; comment_likes would
+      // otherwise give a second (many-to-many) path to profiles.
+      'profile:profiles!comments_user_id_fkey(id,username,display_name,avatar_path)';
+
+  // shortcut: first 20 only, no paging; add a cursor when threads get long.
+  @override
+  Future<Resource<List<CommentModel>>> fetchComments(
+    String artworkId, {
+    bool newestFirst = true,
+  }) async {
+    final result = await _db.get(
+      SupabaseTables.comments,
+      columns: _commentColumns,
+      eq: {'artwork_id': artworkId},
+      filter: (query) => query.isFilter('parent_id', null),
+      orderBy: 'created_at',
+      ascending: !newestFirst,
+      limit: _pageSize,
+    );
+    return _toComments(await _withReplyCounts(result));
+  }
+
+  /// Adds `replies_count` from one `parent_id` query. An embedded count on
+  /// the self-referencing `comments` table is ambiguous in PostgREST and can
+  /// silently return nothing, which left the totals wrong.
+  Future<Resource<List<SBRow>>> _withReplyCounts(
+    Resource<List<SBRow>> result,
+  ) async {
+    final rows = result.dataOrNull;
+    if (rows == null) return result;
+    final ids = rows.map((r) => r['id']).whereType<String>().toList();
+    final counts = <String, int>{};
+    if (ids.isNotEmpty) {
+      final replies = await _db.get(
+        SupabaseTables.comments,
+        columns: 'parent_id',
+        filter: (query) => query.inFilter('parent_id', ids),
+      );
+      for (final reply in replies.dataOrNull ?? const <SBRow>[]) {
+        final parent = reply['parent_id'];
+        if (parent is String) counts[parent] = (counts[parent] ?? 0) + 1;
+      }
+    }
+    return Resource.success([
+      for (final row in rows)
+        {
+          ...row,
+          'replies_count': [
+            {'count': counts[row['id']] ?? 0},
+          ],
+        },
+    ]);
+  }
+
+  @override
+  Future<Resource<List<CommentModel>>> fetchReplies(String commentId) async {
+    final result = await _db.get(
+      SupabaseTables.comments,
+      columns: _commentColumns,
+      eq: {'parent_id': commentId},
+      orderBy: 'created_at',
+    );
+    return _toComments(result);
+  }
+
+  /// Adds like counts and the viewer's `is_liked` flags, then parses.
+  ///
+  /// Counted from one `comment_likes` query rather than a PostgREST embed,
+  /// so it doesn't depend on the schema cache knowing the relationship.
+  // shortcut: pulls every like row for the page (≤20 comments); move to an
+  // RPC or a stored count when comments get thousands of likes.
+  Future<Resource<List<CommentModel>>> _toComments(
+    Resource<List<SBRow>> result,
+  ) async {
+    final rows = result.dataOrNull;
+    if (rows == null) {
+      return result.map((_) => const <CommentModel>[]);
+    }
+    final uid = await _viewerId();
+    final ids = rows.map((r) => r['id']).whereType<String>().toList();
+    final counts = <String, int>{};
+    final liked = <String>{};
+    if (ids.isNotEmpty) {
+      final likes = await _db.get(
+        _commentLikesTable,
+        columns: 'comment_id,user_id',
+        filter: (query) => query.inFilter('comment_id', ids),
+      );
+      // Missing like data isn't worth failing the whole list; counts show 0.
+      for (final like in likes.dataOrNull ?? const <SBRow>[]) {
+        final id = like['comment_id'];
+        if (id is! String) continue;
+        counts[id] = (counts[id] ?? 0) + 1;
+        if (uid != null && like['user_id'] == uid) liked.add(id);
+      }
+    }
+    return Resource.success([
+      for (final row in rows)
+        CommentModel.fromJson({
+          ..._withAvatarUrl(row),
+          'likes_count': [
+            {'count': counts[row['id']] ?? 0},
+          ],
+          'is_liked': liked.contains(row['id']),
+        }),
+    ]);
+  }
+
+  @override
+  Future<Resource<void>> toggleCommentLike(String commentId) async {
+    final auth = await _authUserId();
+    if (auth case ResourceError<String>(:final failure)) {
+      return Resource<void>.error(failure);
+    }
+    final eq = <String, Object?>{
+      'comment_id': commentId,
+      'user_id': (auth as ResourceSuccess<String>).data,
+    };
+    final existing = await _db.get(
+      _commentLikesTable,
+      columns: 'comment_id',
+      eq: eq,
+      limit: 1,
+    );
+    return switch (existing) {
+      ResourceSuccess<List<SBRow>>(:final data) when data.isNotEmpty =>
+        (await _db.delete(_commentLikesTable, eq: eq)).map<void>((_) {}),
+      ResourceSuccess<List<SBRow>>() =>
+        (await _db.post(_commentLikesTable, eq)).map<void>((_) {}),
+      ResourceError<List<SBRow>>(:final failure) =>
+        Resource<void>.error(failure),
+      ResourceLoading<List<SBRow>>() => const Resource<void>.loading(),
+    };
+  }
+
+  /// Resolves the embedded profile's `avatar_path` to a public `avatar_url`.
+  SBRow _withAvatarUrl(SBRow row) {
+    final profile = row['profile'];
+    if (profile is! Map<String, dynamic>) return row;
+    return {
+      ...row,
+      'profile': {
+        ...profile,
+        'avatar_url': _storage.publicUrl(
+          SupabaseBuckets.avatars,
+          profile['avatar_path'] as String?,
+        ),
+      },
+    };
+  }
+
+  @override
+  Future<Resource<void>> postComment(
+    String artworkId,
+    String content, {
+    String? parentId,
+  }) async {
+    final text = content.trim();
+    if (text.isEmpty || text.length > 1000) {
+      return const Resource<void>.error(
+        ValidationFailure('Comments must be 1–1000 characters.'),
+      );
+    }
+    final auth = await _authUserId();
+    if (auth case ResourceError<String>(:final failure)) {
+      return Resource<void>.error(failure);
+    }
+    final result = await _db.post(SupabaseTables.comments, {
+      'artwork_id': artworkId,
+      'user_id': (auth as ResourceSuccess<String>).data,
+      'content': text,
+      if (parentId != null) 'parent_id': parentId,
+    });
+    return result.map<void>((_) {});
+  }
+
+  @override
+  Future<Resource<void>> deleteComment(String commentId) async {
+    final result = await _db.delete(
+      SupabaseTables.comments,
+      eq: {'id': commentId},
+    );
+    if (result case ResourceSuccess<List<SBRow>>(:final data)
+        when data.isEmpty) {
+      return const Resource<void>.error(
+        NotFoundFailure(
+          'Comment not found or you cannot delete it.',
+          statusCode: 404,
+        ),
+      );
+    }
+    return result.map<void>((_) {});
   }
 
   // ── GET USER LIKED ARTWORKS ──────────────────────────────
@@ -370,15 +623,126 @@ class DiscoverUsecaseImpl implements DiscoverUsecase {
 
   // ── TOGGLE LIKE ──────────────────────────────────────────
 
+
+
+  // ── TOGGLE LIKE ──────────────────────────────────────────
+
   @override
-  Future<Resource<void>> toggleLike(
-    String artworkId,
-  ) {
-    return _toggleRelation(
-      table: _likesTable,
-      artworkId: artworkId,
-    );
+  Future<Resource<void>> toggleLike(String artworkId) async {
+    if (artworkId.trim().isEmpty) {
+      return const Resource<void>.error(
+        ValidationFailure('Invalid artwork ID.'),
+      );
+    }
+
+    final auth = await _authUserId();
+
+    return switch (auth) {
+      ResourceSuccess<String>(:final data) => _toggleLikeForUser(
+          artworkId: artworkId,
+          uid: data,
+        ),
+      ResourceError<String>(:final failure) => Resource<void>.error(failure),
+      ResourceLoading<String>() => const Resource<void>.loading(),
+    };
   }
+
+  Future<Resource<void>> _toggleLikeForUser({
+    required String artworkId,
+    required String uid,
+  }) async {
+    final eq = <String, Object?>{
+      'user_id': uid,
+      'artwork_id': artworkId,
+    };
+
+    final existing = await _db.get(
+      _likesTable,
+      columns: 'artwork_id',
+      eq: eq,
+      limit: 1,
+    );
+
+    return switch (existing) {
+      ResourceSuccess<List<SBRow>>(:final data) when data.isNotEmpty =>
+        (await _db.delete(
+          _likesTable,
+          eq: eq,
+        )).map<void>((_) {}),
+
+      ResourceSuccess<List<SBRow>>() =>
+        (await _db.post(
+          _likesTable,
+          eq,
+        )).map<void>((_) {}),
+
+      ResourceError<List<SBRow>>(:final failure) =>
+        Resource<void>.error(failure),
+
+      ResourceLoading<List<SBRow>>() =>
+        const Resource<void>.loading(),
+    };
+  }
+
+  // ── ATTACH LIKE AND BOOKMARK FLAGS ───────────────────────
+
+  Future<Resource<List<SBRow>>> _attachViewerState(
+    List<SBRow> rows,
+  ) async {
+    if (rows.isEmpty) {
+      return const Resource<List<SBRow>>.success([]);
+    }
+
+    final uid = await _viewerId();
+
+    if (uid == null) {
+      return Resource<List<SBRow>>.success([
+        for (final row in rows)
+          {
+            ...row,
+            'is_liked': false,
+            'is_bookmarked': false,
+          },
+      ]);
+    }
+
+    final ids = rows
+        .map((row) => row['id'])
+        .whereType<String>()
+        .toSet()
+        .toList();
+
+    if (ids.isEmpty) {
+      return Resource<List<SBRow>>.success([
+        for (final row in rows)
+          {
+            ...row,
+            'is_liked': false,
+            'is_bookmarked': false,
+          },
+      ]);
+    }
+
+    final liked = await _getRelationIds(
+      table: _likesTable,
+      uid: uid,
+      artworkIds: ids,
+    );
+
+    return switch (liked) {
+      ResourceSuccess<Set<String>>(:final data) => _attachBookmarks(
+          rows: rows,
+          uid: uid,
+          artworkIds: ids,
+          likedIds: data,
+        ),
+      ResourceError<Set<String>>(:final failure) =>
+        Resource<List<SBRow>>.error(failure),
+      ResourceLoading<Set<String>>() =>
+        const Resource<List<SBRow>>.loading(),
+    };
+  }
+
 
   // ── TOGGLE SAVE ──────────────────────────────────────────
 
@@ -588,60 +952,6 @@ class DiscoverUsecaseImpl implements DiscoverUsecase {
 
   // ── ATTACH LIKE AND BOOKMARK FLAGS ───────────────────────
 
-  Future<Resource<List<SBRow>>> _attachViewerState(
-    List<SBRow> rows,
-  ) async {
-    if (rows.isEmpty) {
-      return const Resource<List<SBRow>>.success([]);
-    }
-
-    final uid = await _viewerId();
-
-    if (uid == null) {
-      return Resource<List<SBRow>>.success(
-        [
-          for (final row in rows)
-            {
-              ...row,
-              'is_liked': false,
-              'is_bookmarked': false,
-            },
-        ],
-      );
-    }
-
-    final ids =
-        rows.map((row) => row['id']).whereType<String>().toSet().toList();
-
-    if (ids.isEmpty) {
-      return Resource<List<SBRow>>.success(
-        [
-          for (final row in rows)
-            {
-              ...row,
-              'is_liked': false,
-              'is_bookmarked': false,
-            },
-        ],
-      );
-    }
-
-    final liked = await _getRelationIds(
-      table: _likesTable,
-      uid: uid,
-      artworkIds: ids,
-    );
-
-    // TODO: the likes / bookmarks tables don't exist yet. Until they do, a
-    // failed lookup shows everything as not liked / saved instead of failing
-    // the whole feed.
-    return _attachBookmarks(
-      rows: rows,
-      uid: uid,
-      artworkIds: ids,
-      likedIds: liked.dataOrNull ?? const {},
-    );
-  }
 
   Future<Resource<List<SBRow>>> _attachBookmarks({
     required List<SBRow> rows,

@@ -17,6 +17,8 @@ class HomeFeedScreen extends ConsumerStatefulWidget {
 class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
   bool _showFollowing = false;
 
+  
+
   @override
   Widget build(BuildContext context) {
     final me = switch (ref.watch(currentArtistProvider)) {

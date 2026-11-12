@@ -97,13 +97,19 @@ class ArtworkModel extends Equatable {
     this.tags = const [],
     this.visibility = 'public',
     this.isLiked = false,
+    this.likesCount = 0,
+    this.commentsCount = 0,
     this.isBookmarked = false,
     this.createdAt,
     this.updatedAt,
+    this.artist,
   });
 
   final String id;
   final String userId;
+
+  /// Only set by queries that embed `profile` (e.g. `fetchPostById`).
+  final ArtworkArtistModel? artist;
   final String title;
   final String? description;
   final List<ArtworkImageModel> images;
@@ -111,6 +117,10 @@ class ArtworkModel extends Equatable {
   final List<String> tags;
   final String visibility;
   final bool isLiked;
+  final int likesCount;
+
+  /// Comments and replies together.
+  final int commentsCount;
   final bool isBookmarked;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -143,6 +153,15 @@ class ArtworkModel extends Equatable {
           .toList(),
       visibility: json['visibility'] as String? ?? 'public',
       isLiked: json['is_liked'] as bool? ?? false,
+      // PostgREST embeds an aggregate as [{count: n}].
+      likesCount: switch (json['likes_count']) {
+        [{'count': final num n}, ...] => n.toInt(),
+        _ => 0,
+      },
+      commentsCount: switch (json['comments_count']) {
+        [{'count': final num n}, ...] => n.toInt(),
+        _ => 0,
+      },
       isBookmarked: json['is_bookmarked'] as bool? ?? false,
       createdAt: DateTime.tryParse(
         json['created_at'] as String? ?? '',
@@ -150,6 +169,11 @@ class ArtworkModel extends Equatable {
       updatedAt: DateTime.tryParse(
         json['updated_at'] as String? ?? '',
       ),
+      artist: json['profile'] is Map<String, dynamic>
+          ? ArtworkArtistModel.fromJson(
+              json['profile'] as Map<String, dynamic>,
+            )
+          : null,
     );
   }
 
@@ -167,6 +191,7 @@ class ArtworkModel extends Equatable {
       'is_bookmarked': isBookmarked,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
+      'profile': artist?.toJson(),
     };
   }
 
@@ -183,8 +208,12 @@ class ArtworkModel extends Equatable {
     bool? isBookmarked,
     DateTime? createdAt,
     DateTime? updatedAt,
+    ArtworkArtistModel? artist,
   }) {
     return ArtworkModel(
+      artist: artist ?? this.artist,
+      likesCount: likesCount,
+      commentsCount: commentsCount,
       id: id ?? this.id,
       userId: userId ?? this.userId,
       title: title ?? this.title,
@@ -211,10 +240,62 @@ class ArtworkModel extends Equatable {
         tags,
         visibility,
         isLiked,
+        likesCount,
+        commentsCount,
         isBookmarked,
         createdAt,
         updatedAt,
+        artist,
       ];
+}
+
+/// The artist's `profiles` row embedded as `profile`.
+class ArtworkArtistModel extends Equatable {
+  const ArtworkArtistModel({
+    required this.id,
+    required this.username,
+    required this.displayName,
+    this.bio,
+    this.avatarUrl,
+    this.specialties = const [],
+  });
+
+  final String id;
+  final String username;
+  final String displayName;
+  final String? bio;
+
+  /// Public URL resolved from `avatar_path` by the usecase.
+  final String? avatarUrl;
+  final List<String> specialties;
+
+  factory ArtworkArtistModel.fromJson(Map<String, dynamic> json) {
+    return ArtworkArtistModel(
+      id: json['id'] as String? ?? '',
+      username: json['username'] as String? ?? '',
+      displayName: json['display_name'] as String? ?? '',
+      bio: json['bio'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
+      specialties: (json['specialties'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'display_name': displayName,
+      'bio': bio,
+      'avatar_url': avatarUrl,
+      'specialties': specialties,
+    };
+  }
+
+  @override
+  List<Object?> get props =>
+      [id, username, displayName, bio, avatarUrl, specialties];
 }
 
 class ArtworkImageModel extends Equatable {

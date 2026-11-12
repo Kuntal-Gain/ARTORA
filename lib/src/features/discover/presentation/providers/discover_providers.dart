@@ -6,6 +6,7 @@ import 'package:artora/src/features/discover/data/discover_usecase.dart';
 import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/state/artwork_provider.dart';
 import 'package:artora/src/services/supabase_storage_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgresChangeEvent;
 import 'package:artora/src/features/discover/data/recent_search_store.dart';
 import 'package:artora/src/features/discover/data/sample_discover_repository.dart';
 import 'package:artora/src/features/discover/model/discover_models.dart';
@@ -30,6 +31,13 @@ class LoadNotifier<T> extends StateNotifier<RequestState<T>> {
     if (!mounted) return;
     state = result.toRequestState();
   }
+
+  /// Applies [change] to loaded data; ignored until the first load succeeds.
+  void mutate(T Function(T data) change) {
+    if (state case RequestSuccess<T>(:final data)) {
+      state = RequestSuccess(change(data));
+    }
+  }
 }
 
 /// Optimistic on/off set (follows, likes, bookmarks). The change shows
@@ -38,8 +46,17 @@ class ToggleSetNotifier extends StateNotifier<Set<String>> {
   ToggleSetNotifier(
     this._persist, {
     Future<Resource<Set<String>>> Function()? load,
-  }) : super(const <String>{}) {
+  })  : _load = load,
+        super(const <String>{}) {
     if (load != null) _seed(load);
+  }
+
+  final Future<Resource<Set<String>>> Function()? _load;
+
+  /// Replaces the set with the server's, e.g. after a change made elsewhere.
+  Future<void> reload() async {
+    final ids = (await _load?.call())?.dataOrNull;
+    if (mounted && ids != null) state = ids;
   }
 
   final Future<Resource<void>> Function(String id, bool on) _persist;
@@ -169,16 +186,77 @@ Artwork _toArtwork(ArtworkModel model) {
         Artist(id: model.userId, username: '', displayName: '', avatarUrl: ''),
     category: model.category?.name ?? '',
     tags: model.tags,
+    likes: model.likesCount,
+    comments: model.commentsCount,
   );
+}
+
+/// Heart and count update instantly; the realtime echo is then ignored.
+Future<void> toggleLikeOptimistic(WidgetRef ref, String id) async {
+  final delta = ref.read(likedProvider).contains(id) ? -1 : 1;
+  void apply(int d) => ref.read(feedProvider.notifier).mutate((list) => [
+        for (final a in list) a.id == id ? a.withLikes(a.likes + d) : a,
+      ]);
+  apply(delta);
+  await ref.read(likedProvider.notifier).toggle(id);
+  // toggle() rolls the heart back on failure; undo the count to match.
+  if (ref.read(likedProvider).contains(id) != (delta > 0)) {
+    apply(-delta);
+  }
 }
 
 final feedProvider = StateNotifierProvider<LoadNotifier<List<Artwork>>,
     RequestState<List<Artwork>>>((ref) {
   final usecase = ref.watch(discoverUsecaseProvider);
-  return LoadNotifier(() async {
+  final notifier = LoadNotifier<List<Artwork>>(() async {
     final result = await usecase.getPublicFeed();
     return result.map((list) => list.artworks.map(_toArtwork).toList());
   });
+
+  // Live like counts. Needs `likes` in the supabase_realtime publication
+  // (and REPLICA IDENTITY FULL so DELETE payloads carry artwork_id).
+  void bump(String? id, int delta) {
+    if (id == null) return;
+    notifier.mutate((list) => [
+          for (final a in list) a.id == id ? a.withLikes(a.likes + delta) : a,
+        ]);
+  }
+
+  final channel = SBClient.instance.subscribeChanges(
+    'likes',
+    event: PostgresChangeEvent.all,
+    // debugPrint, not AppLogger: developer.log doesn't show in `flutter run`.
+    onStatus: (status, error) =>
+        debugPrint('[REALTIME] likes status: $status $error'),
+    onChange: (p) {
+      debugPrint(
+        '[REALTIME] likes ${p.eventType.name} old=${p.oldRecord} new=${p.newRecord}',
+      );
+      // Our own likes are already counted optimistically; ignore their echo.
+      final me = AppConfig.supabase.auth.currentUser?.id;
+      switch (p.eventType) {
+        case PostgresChangeEvent.insert:
+          if (p.newRecord['user_id'] == me) return;
+          bump(p.newRecord['artwork_id'] as String?, 1);
+        case PostgresChangeEvent.delete:
+          if (p.oldRecord['user_id'] == me) return;
+          final id = p.oldRecord['artwork_id'] as String?;
+          // Without REPLICA IDENTITY FULL the payload only has the row's
+          // primary key, so fall back to a reload.
+          if (id == null) {
+            notifier.refresh();
+          } else {
+            bump(id, -1);
+          }
+          // The heart state is per-user and the payload can't say whose
+          // like it was, so re-sync it.
+          ref.read(likedProvider.notifier).reload();
+        default:
+      }
+    },
+  );
+  ref.onDispose(() => SBClient.instance.unsubscribeChanges(channel));
+  return notifier;
 });
 
 final exploreProvider = StateNotifierProvider<LoadNotifier<ExploreContent>,

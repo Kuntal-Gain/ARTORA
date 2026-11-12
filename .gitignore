@@ -55,3 +55,6 @@ architecture.md
 CLAUDE.md
 DESIGN.md
 SETUP.md
+
+# Local Supabase SQL (not committed)
+supabase/

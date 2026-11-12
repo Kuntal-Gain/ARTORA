@@ -43,6 +43,32 @@ class Artwork {
   final int likes;
   final int comments;
   final bool isEditorsPick;
+
+  Artwork withComments(int comments) => Artwork(
+        id: id,
+        title: title,
+        imageUrl: imageUrl,
+        aspectRatio: aspectRatio,
+        artist: artist,
+        category: category,
+        tags: tags,
+        likes: likes,
+        comments: comments < 0 ? 0 : comments,
+        isEditorsPick: isEditorsPick,
+      );
+
+  Artwork withLikes(int likes) => Artwork(
+        id: id,
+        title: title,
+        imageUrl: imageUrl,
+        aspectRatio: aspectRatio,
+        artist: artist,
+        category: category,
+        tags: tags,
+        likes: likes < 0 ? 0 : likes,
+        comments: comments,
+        isEditorsPick: isEditorsPick,
+      );
 }
 
 class ArtCategory {
