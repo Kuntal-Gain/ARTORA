@@ -121,7 +121,7 @@ class AppFilterChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.tune_rounded, size: 18.sp, color: cs.onSurface),
+            Icon(AppIcons.tune, size: 18.sp, color: cs.onSurface),
             AppSpacing.hGap(AppSpacing.sm),
             Text(label, style: context.textTheme.labelLarge),
             if (count > 0) ...[

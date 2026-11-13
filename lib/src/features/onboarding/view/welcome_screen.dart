@@ -102,7 +102,7 @@ class WelcomeScreen extends StatelessWidget {
                     onPressed: () => context.push(AppRoutes.signup),
                 
                     suffixIcon: Icon(
-                      Icons.arrow_forward_rounded,
+                      AppIcons.forward,
                       size: 20.r,
                       color: colors.onPrimary,
                     ),

@@ -152,7 +152,7 @@ class AppTimePicker extends StatelessWidget {
               ),
             ),
             Icon(
-              useCupertino ? CupertinoIcons.time : Icons.access_time,
+              useCupertino ? AppIcons.time : AppIcons.time,
               size: 20.sp,
               color: cs.onSurfaceVariant,
             ),

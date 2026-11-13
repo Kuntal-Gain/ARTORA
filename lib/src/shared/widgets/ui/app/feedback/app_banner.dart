@@ -50,8 +50,8 @@ class AppBanner extends StatelessWidget {
       leading: leading ??
           Icon(
             useCupertino
-                ? CupertinoIcons.info_circle_fill
-                : Icons.info_outline,
+                ? AppIcons.infoFilled
+                : AppIcons.info,
             color: fg,
             size: 22.sp,
           ),

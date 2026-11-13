@@ -38,7 +38,7 @@ class DiscoverSearchBar extends StatelessWidget {
               children: [
                 AppSpacing.hGap(AppSpacing.md),
                 Icon(
-                  Icons.search_rounded,
+                  AppIcons.search,
                   size: 22.r,
                   color: colors.onSurfaceVariant,
                 ),
@@ -56,7 +56,7 @@ class DiscoverSearchBar extends StatelessWidget {
                 if (onFilter != null)
                   IconButton(
                     onPressed: onFilter,
-                    icon: Icon(Icons.tune_rounded, color: colors.onSurface),
+                    icon: Icon(AppIcons.tune, color: colors.onSurface),
                   )
                 else
                   AppSpacing.hGap(AppSpacing.md),

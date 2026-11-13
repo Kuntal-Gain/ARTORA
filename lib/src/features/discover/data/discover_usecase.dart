@@ -1,9 +1,14 @@
 import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/model/artwork_req_model.dart';
 import 'package:artora/src/features/discover/model/comment_model.dart';
+import 'package:artora/src/features/discover/model/discover_models.dart';
 import 'package:artora/src/imports/imports.dart';
 
 abstract class DiscoverUsecase {
+  // ═══════════════════════════════════════════════════════════
+  // FEED — home feed, profile feeds, liked and saved lists
+  // ═══════════════════════════════════════════════════════════
+
   /// get [public] feed
   Future<Resource<ArtworkListModel>> getPublicFeed();
 
@@ -15,6 +20,34 @@ abstract class DiscoverUsecase {
 
   /// get [user] saved artworks
   Future<Resource<ArtworkListModel>> getUserSavedArtworks(String uid);
+
+  // ═══════════════════════════════════════════════════════════
+  // EXPLORE — categories, trending tags, collections, artists, picks
+  // ═══════════════════════════════════════════════════════════
+
+  /// everything the explore screen shows, in one call (`get_explore` RPC);
+  /// [category] narrows the artists and editor's picks, null means all
+  Future<Resource<ExploreContent>> fetchExplore({String? category});
+
+  // ═══════════════════════════════════════════════════════════
+  // SEARCH & FOLLOWS — artwork / artist / tag search, who the user follows
+  // ═══════════════════════════════════════════════════════════
+
+  /// public artworks, artists and tags matching [query]
+  Future<Resource<SearchResults>> search(String query);
+
+  /// ids of the artists the signed-in user follows
+  Future<Resource<Set<String>>> getFollowingIds();
+
+  /// follow or unfollow an artist; safe to repeat
+  Future<Resource<void>> setFollowing(
+    String artistId, {
+    required bool following,
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // ARTWORK — create, read, update, delete, like, save
+  // ═══════════════════════════════════════════════════════════
 
   /// post an new [ARTWORK] to the platform
   Future<Resource<void>> postArtwork(PostArtworkModel artwork);
@@ -34,14 +67,24 @@ abstract class DiscoverUsecase {
   /// a single [ARTWORK] with its artist's profile embedded
   Future<Resource<ArtworkModel>> fetchPostById(String postId);
 
+  /// delete a [Artwork] from the platform
+  Future<Resource<void>> deleteArtwork(String artworkId);
+
+  /// like/unlike a [Artwork]
+  Future<Resource<void>> toggleLike(String artworkId);
+
+  /// save/unsave a [Artwork]
+  Future<Resource<void>> toggleSave(String artworkId);
+
+  // ═══════════════════════════════════════════════════════════
+  // COMMENTS — threads, replies, likes
+  // ═══════════════════════════════════════════════════════════
+
   /// top-level comments of an artwork, with reply and like counts
   Future<Resource<List<CommentModel>>> fetchComments(
     String artworkId, {
     bool newestFirst = true,
   });
-
-  /// like/unlike a comment or reply
-  Future<Resource<void>> toggleCommentLike(String commentId);
 
   /// replies of one comment, oldest first
   Future<Resource<List<CommentModel>>> fetchReplies(String commentId);
@@ -57,12 +100,6 @@ abstract class DiscoverUsecase {
   /// the artwork owner
   Future<Resource<void>> deleteComment(String commentId);
 
-  /// delete a [Artwork] from the platform
-  Future<Resource<void>> deleteArtwork(String artworkId);
-
-  /// like/unlike a [Artwork]
-  Future<Resource<void>> toggleLike(String artworkId);
-
-  /// save/unsave a [Artwork]
-  Future<Resource<void>> toggleSave(String artworkId);
+  /// like/unlike a comment or reply
+  Future<Resource<void>> toggleCommentLike(String commentId);
 }

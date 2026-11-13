@@ -194,8 +194,8 @@ class CommentTile extends StatelessWidget {
                           children: [
                             Icon(
                               comment.isLiked
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
+                                  ? AppIcons.likeFilled
+                                  : AppIcons.like,
                               size: 18.r,
                               color: comment.isLiked
                                   ? AppColors.error
@@ -235,7 +235,7 @@ class CommentTile extends StatelessWidget {
                         padding: EdgeInsets.zero,
                         iconSize: 18.r,
                         icon: const Icon(
-                          Icons.more_vert_rounded,
+                          AppIcons.more,
                           color: AppColors.textSecondary,
                         ),
                         color: AppColors.elevated,

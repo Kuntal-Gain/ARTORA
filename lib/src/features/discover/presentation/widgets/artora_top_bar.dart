@@ -39,7 +39,7 @@ class ArtoraTopBar extends StatelessWidget {
               clipBehavior: Clip.none,
               children: [
                 Icon(
-                  Icons.notifications_none_rounded,
+                  AppIcons.notifications,
                   size: 26.r,
                   color: colors.onSurface,
                 ),

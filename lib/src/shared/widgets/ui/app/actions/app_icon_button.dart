@@ -5,7 +5,7 @@ import '../../../../../imports/imports.dart';
 /// Usage:
 /// ```dart
 /// AppIconButton(
-///   icon: Icons.favorite,
+///   icon: AppIcons.likeFilled,
 ///   onPressed: _toggleFavorite,
 ///   variant: ButtonVariant.ghost,
 ///   isLoading: state.isSaving,

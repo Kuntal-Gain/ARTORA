@@ -95,8 +95,8 @@ class AppNumberStepper extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           buildButton(
-            materialIcon: Icons.remove,
-            cupertinoIcon: CupertinoIcons.minus,
+            materialIcon: AppIcons.remove,
+            cupertinoIcon: AppIcons.remove,
             onPressed: canDec ? _decrement : null,
           ),
           ConstrainedBox(
@@ -111,8 +111,8 @@ class AppNumberStepper extends StatelessWidget {
             ),
           ),
           buildButton(
-            materialIcon: Icons.add,
-            cupertinoIcon: CupertinoIcons.plus,
+            materialIcon: AppIcons.add,
+            cupertinoIcon: AppIcons.add,
             onPressed: canInc ? _increment : null,
           ),
         ],

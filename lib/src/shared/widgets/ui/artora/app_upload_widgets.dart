@@ -48,7 +48,7 @@ class AppImagePlaceholder extends StatelessWidget {
   const AppImagePlaceholder({
     super.key,
     this.onTap,
-    this.icon = Icons.image_outlined,
+    this.icon = AppIcons.image,
     this.aspectRatio = 1,
   });
 
@@ -98,7 +98,7 @@ class AppUploadRetry extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.cloud_upload_outlined, size: 32.sp, color: cs.primary),
+        Icon(AppIcons.cloudUpload, size: 32.sp, color: cs.primary),
         AppSpacing.vGap(AppSpacing.sm),
         Text(
           message,

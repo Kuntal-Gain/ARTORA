@@ -21,8 +21,8 @@ class AppBottomNavItem {
 ///   currentIndex: index,
 ///   onTap: (i) => setState(() => index = i),
 ///   items: const [
-///     AppBottomNavItem(label: 'Home', icon: Icons.home_outlined),
-///     AppBottomNavItem(label: 'Profile', icon: Icons.person_outline),
+///     AppBottomNavItem(label: 'Home', icon: AppIcons.home),
+///     AppBottomNavItem(label: 'Profile', icon: AppIcons.person),
 ///   ],
 /// )
 /// ```

@@ -135,7 +135,7 @@ class AppBrandLogo extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.change_history_rounded, size: iconSize.sp, color: cs.primary),
+        Icon(AppIcons.triangle, size: iconSize.sp, color: cs.primary),
         AppSpacing.vGap(AppSpacing.sm),
         Text(
           name.toUpperCase(),
@@ -210,7 +210,7 @@ class AppAvatarPicker extends StatelessWidget {
                     radius: 14.r,
                     backgroundColor: cs.primary,
                     child: Icon(
-                      Icons.photo_camera_rounded,
+                      AppIcons.camera,
                       size: 16.sp,
                       color: cs.onPrimary,
                     ),

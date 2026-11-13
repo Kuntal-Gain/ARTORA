@@ -107,14 +107,14 @@ class _ArtworkDetailScreenState extends ConsumerState<ArtworkDetailScreen> {
                     tooltip: 'Back',
                     onPressed: () => context.pop(),
                     icon: const Icon(
-                      Icons.arrow_back_rounded,
+                      AppIcons.back,
                       color: AppColors.white,
                     ),
                   ),
                   const Spacer(),
                   PopupMenuButton<VoidCallback>(
                     icon: const Icon(
-                      Icons.more_vert_rounded,
+                      AppIcons.more,
                       color: AppColors.white,
                     ),
                     color: AppColors.elevated,
@@ -224,28 +224,28 @@ class _ArtworkDetailScreenState extends ConsumerState<ArtworkDetailScreen> {
                         children: [
                           _Action(
                             icon: liked
-                                ? Icons.favorite_rounded
-                                : Icons.favorite_border_rounded,
+                                ? AppIcons.likeFilled
+                                : AppIcons.like,
                             color: liked ? AppColors.error : null,
                             label: formatCompact(likes),
                             onTap: () => toggleLikeOptimistic(ref, id),
                           ),
                           _Action(
-                            icon: Icons.chat_bubble_outline_rounded,
+                            icon: AppIcons.comment,
                             label: formatCompact(comments),
                             onTap: () => context
                                 .push(AppRoutes.artworkCommentsPath(id)),
                           ),
                           _Action(
-                            icon: Icons.ios_share_rounded,
+                            icon: AppIcons.share,
                             label: 'Share',
                             onTap: () =>
                                 ShareService.instance.shareText(art.title),
                           ),
                           _Action(
                             icon: saved
-                                ? Icons.bookmark_rounded
-                                : Icons.bookmark_border_rounded,
+                                ? AppIcons.bookmarkFilled
+                                : AppIcons.bookmark,
                             color: saved ? AppColors.primary : null,
                             label: LocaleKeys.discover_save.tr(),
                             onTap: () => ref

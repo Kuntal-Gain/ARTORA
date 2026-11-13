@@ -34,16 +34,16 @@ class ArtoraBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final fabSize = 56.r;
     final items = <(IconData, IconData, String)>[
-      (Icons.home_outlined, Icons.home_rounded, LocaleKeys.nav_home.tr()),
-      (Icons.search_rounded, Icons.saved_search_rounded, LocaleKeys.nav_explore.tr()),
+      (AppIcons.home, AppIcons.homeFilled, LocaleKeys.nav_home.tr()),
+      (AppIcons.search, AppIcons.savedSearch, LocaleKeys.nav_explore.tr()),
       (
-        Icons.bookmark_border_rounded,
-        Icons.bookmark_rounded,
+        AppIcons.bookmark,
+        AppIcons.bookmarkFilled,
         LocaleKeys.nav_saved.tr(),
       ),
       (
-        Icons.person_outline_rounded,
-        Icons.person_rounded,
+        AppIcons.person,
+        AppIcons.personFilled,
         LocaleKeys.nav_profile.tr(),
       ),
     ];
@@ -166,7 +166,7 @@ class _CreateButton extends StatelessWidget {
             width: size,
             height: size,
             child: Icon(
-              Icons.add_rounded,
+              AppIcons.add,
               size: 30.r,
               color: AppColors.textPrimary,
             ),

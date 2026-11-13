@@ -56,7 +56,7 @@ class AppTopBar extends StatelessWidget implements PreferredSizeWidget {
         child: ColoredBox(
           color: Colors.transparent,
           child:               Icon(
-            Icons.arrow_back,
+            AppIcons.back,
             color: theme.appBarTheme.iconTheme?.color ??
                 theme.colorScheme.onSurface,
               )

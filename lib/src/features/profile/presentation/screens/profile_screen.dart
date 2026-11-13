@@ -291,7 +291,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             padding: EdgeInsets.only(left: 18.r),
                             child: Center(
                               child: _HeaderAction(
-                                icon: Icons.arrow_back_rounded,
+                                icon: AppIcons.back,
                                 tooltip: 'Back',
                                 onTap: widget.onBack ??
                                     () => Navigator.of(context).maybePop(),
@@ -304,7 +304,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         padding: EdgeInsets.only(right: 18.r),
                         child: Center(
                           child: _HeaderAction(
-                            icon: Icons.more_vert_rounded,
+                            icon: AppIcons.more,
                             tooltip: 'More options',
                             onTap: widget.onMore,
                           ),
@@ -319,7 +319,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           _ProfileMedia(
                             image: _coverImage,
                             variant: 0,
-                            icon: Icons.landscape_outlined,
+                            icon: AppIcons.landscape,
                             label: 'COVER IMAGE',
                           ),
                           const DecoratedBox(
@@ -595,7 +595,7 @@ class _ProfileAvatar extends StatelessWidget {
                 child: _ProfileMedia(
                   image: image,
                   variant: 1,
-                  icon: Icons.person_outline_rounded,
+                  icon: AppIcons.person,
                 ),
               ),
             ),
@@ -617,7 +617,7 @@ class _ProfileAvatar extends StatelessWidget {
                     height: 32.r,
                     width: 32.r,
                     child: Icon(
-                      Icons.edit_rounded,
+                      AppIcons.edit,
                       size: 15.r,
                       color: const Color(0xFF160D24),
                     ),
@@ -652,7 +652,7 @@ class _EditProfileButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(12.r),
           ),
         ),
-        icon: Icon(Icons.edit_outlined, size: 16.r),
+        icon: Icon(AppIcons.edit, size: 16.r),
         label: Text(
           'Edit Profile',
           maxLines: 1,
@@ -832,7 +832,7 @@ class _GalleryTile extends StatelessWidget {
             child: _ProfileMedia(
               image: image,
               variant: variant,
-              icon: Icons.image_outlined,
+              icon: AppIcons.image,
               label: label,
             ),
           ),

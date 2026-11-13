@@ -59,7 +59,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 label: LocaleKeys.auth_email.tr(),
                 hint: 'artist@example.com',
                 controller: _email,
-                icon: const Icon(Icons.mail_outline_rounded),
+                icon: const Icon(AppIcons.mail),
                 keyboardType: TextInputType.emailAddress,
                 validator: AppValidators.email,
                 enabled: !state.isLoading,
@@ -68,7 +68,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               AuthField(
                 label: LocaleKeys.auth_password.tr(),
                 controller: _password,
-                icon: const Icon(Icons.lock_outline_rounded),
+                icon: const Icon(AppIcons.lock),
                 obscure: true,
                 textInputAction: TextInputAction.done,
                 validator: AppValidators.passwordRequired,

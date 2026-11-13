@@ -168,7 +168,7 @@ class AppDropdown<T> extends StatelessWidget {
                     ),
                   ),
                   Icon(
-                    CupertinoIcons.chevron_down,
+                    AppIcons.chevronDown,
                     size: 16.sp,
                     color: cs.onSurfaceVariant,
                   ),

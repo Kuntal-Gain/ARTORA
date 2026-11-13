@@ -47,7 +47,7 @@ class AuthScaffold extends StatelessWidget {
                           padding:
                               EdgeInsets.symmetric(vertical: AppSpacing.sm),
                           child: Icon(
-                            Icons.arrow_back_rounded,
+                            AppIcons.back,
                             color: colors.onSurface,
                           ),
                         ),
@@ -237,7 +237,7 @@ class AuthNoticeCard extends StatelessWidget {
               height: 28.r,
               decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
               child: Icon(
-                isSuccess ? Icons.check_rounded : Icons.priority_high_rounded,
+                isSuccess ? AppIcons.check : AppIcons.priorityHigh,
                 size: 18.r,
                 color: AppColors.background,
               ),

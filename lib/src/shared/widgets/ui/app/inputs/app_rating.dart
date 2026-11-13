@@ -45,10 +45,10 @@ class AppRating extends StatelessWidget {
         : context.isCupertinoUi;
     final cs = context.colors;
     final starSize = size ?? 28.sp;
-    final filledIcon = useCupertino ? CupertinoIcons.star_fill : Icons.star_rounded;
-    final emptyIcon = useCupertino ? CupertinoIcons.star : Icons.star_outline_rounded;
+    final filledIcon = useCupertino ? AppIcons.starFilled : AppIcons.starFilled;
+    final emptyIcon = useCupertino ? AppIcons.star : AppIcons.star;
     final halfIcon =
-        useCupertino ? CupertinoIcons.star_lefthalf_fill : Icons.star_half_rounded;
+        useCupertino ? AppIcons.starHalf : AppIcons.starHalf;
 
     return Row(
       mainAxisSize: MainAxisSize.min,

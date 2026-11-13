@@ -34,22 +34,22 @@ class AppStatusBanner extends StatelessWidget {
       AppStatusType.success => (
           ac.success,
           ac.successContainer ?? cs.secondaryContainer,
-          Icons.check_rounded,
+          AppIcons.check,
         ),
       AppStatusType.error => (
           cs.error,
           cs.errorContainer,
-          Icons.priority_high_rounded,
+          AppIcons.priorityHigh,
         ),
       AppStatusType.warning => (
           ac.warning,
           ac.warningContainer ?? cs.secondaryContainer,
-          Icons.warning_amber_rounded,
+          AppIcons.warning,
         ),
       AppStatusType.info => (
           ac.info,
           ac.infoContainer ?? cs.secondaryContainer,
-          Icons.info_outline_rounded,
+          AppIcons.info,
         ),
     };
 

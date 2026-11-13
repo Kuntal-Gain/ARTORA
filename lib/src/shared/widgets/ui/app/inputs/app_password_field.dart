@@ -61,7 +61,7 @@ class _AppPasswordFieldState extends State<AppPasswordField> {
             minimumSize: Size.zero,
             onPressed: () => setState(() => _obscure = !_obscure),
             child: Icon(
-              _obscure ? CupertinoIcons.eye : CupertinoIcons.eye_slash,
+              _obscure ? AppIcons.visibility : AppIcons.visibilityOff,
               size: 20.sp,
               color: cs.onSurfaceVariant,
             ),
@@ -69,7 +69,7 @@ class _AppPasswordFieldState extends State<AppPasswordField> {
         : IconButton(
             onPressed: () => setState(() => _obscure = !_obscure),
             icon: Icon(
-              _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              _obscure ? AppIcons.visibility : AppIcons.visibilityOff,
               color: cs.onSurfaceVariant,
             ),
           );

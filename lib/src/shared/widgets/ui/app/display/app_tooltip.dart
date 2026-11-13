@@ -6,7 +6,7 @@ import '../../../../../imports/imports.dart';
 /// ```dart
 /// AppTooltip(
 ///   message: 'Copy link',
-///   child: IconButton(onPressed: _copy, icon: Icon(Icons.link)),
+///   child: IconButton(onPressed: _copy, icon: Icon(AppIcons.link)),
 /// )
 /// ```
 class AppTooltip extends StatelessWidget {

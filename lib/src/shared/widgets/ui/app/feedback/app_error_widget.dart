@@ -16,7 +16,7 @@ class AppErrorWidget extends StatelessWidget {
     this.title = 'Something went wrong',
     this.message,
     this.onRetry,
-    this.icon = Icons.error_outline_rounded,
+    this.icon = AppIcons.error,
     this.retryLabel = 'Try Again',
   });
 

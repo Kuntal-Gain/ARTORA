@@ -1,7 +1,18 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/utils.dart';
 
-/// A wrapper around [SharedPreferences] for simple key-value persistence.
+/// Every key written to local storage. Add new keys here so the app has one
+/// list of what it persists, and use them with [StorageService] instead of
+/// creating a store per feature.
+abstract final class StorageKeys {
+  StorageKeys._();
+
+  /// `List<String>` — the user's last search queries, newest first.
+  static const String recentSearches = 'recent_searches';
+}
+
+/// The app's single entry point for simple key-value persistence, a wrapper
+/// around [SharedPreferences]. Features read and write through this class.
 class StorageService {
   StorageService._();
   static final StorageService instance = StorageService._();

@@ -1,20 +1,13 @@
 import 'dart:async';
 
 import 'package:artora/src/features/auth/presentation/providers/auth_providers.dart';
-import 'package:artora/src/features/discover/data/discover_repository.dart';
 import 'package:artora/src/features/discover/data/discover_usecase.dart';
 import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/state/artwork_provider.dart';
 import 'package:artora/src/services/supabase_storage_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgresChangeEvent;
-import 'package:artora/src/features/discover/data/recent_search_store.dart';
-import 'package:artora/src/features/discover/data/sample_discover_repository.dart';
 import 'package:artora/src/features/discover/model/discover_models.dart';
 import 'package:artora/src/imports/imports.dart';
-
-final discoverRepositoryProvider = Provider<DiscoverRepository>(
-  (ref) => SampleDiscoverRepository(),
-);
 
 /// Loads on creation. [refresh] keeps showing the last data while reloading,
 /// so pull-to-refresh doesn't flash a skeleton.
@@ -84,11 +77,11 @@ class ToggleSetNotifier extends StateNotifier<Set<String>> {
 }
 
 class SearchNotifier extends StateNotifier<RequestState<SearchResults>> {
-  SearchNotifier(this._repository) : super(const RequestInitial());
+  SearchNotifier(this._usecase) : super(const RequestInitial());
 
   static const Duration _debounce = Duration(milliseconds: 300);
 
-  final DiscoverRepository _repository;
+  final DiscoverUsecase _usecase;
   Timer? _timer;
   String _latest = '';
 
@@ -113,7 +106,7 @@ class SearchNotifier extends StateNotifier<RequestState<SearchResults>> {
   }
 
   Future<void> _run(String query) async {
-    final result = await _repository.search(query);
+    final result = await _usecase.search(query);
     if (!mounted || query != _latest) return;
     state = result.toRequestState();
   }
@@ -125,12 +118,15 @@ class SearchNotifier extends StateNotifier<RequestState<SearchResults>> {
   }
 }
 
+/// Recent search queries, persisted through [StorageService].
 class RecentSearchesNotifier extends StateNotifier<List<String>> {
-  RecentSearchesNotifier(RecentSearchStore store)
-      : _store = store,
-        super(store.read());
+  RecentSearchesNotifier()
+      : super(
+          StorageService.instance.getStringList(StorageKeys.recentSearches) ??
+              const <String>[],
+        );
 
-  final RecentSearchStore _store;
+  static const int maxEntries = 10;
 
   void add(String raw) {
     final query = raw.trim();
@@ -138,7 +134,7 @@ class RecentSearchesNotifier extends StateNotifier<List<String>> {
     _save([
       query,
       ...state.where((entry) => entry.toLowerCase() != query.toLowerCase()),
-    ].take(RecentSearchStore.maxEntries).toList());
+    ].take(maxEntries).toList());
   }
 
   void remove(String query) =>
@@ -148,7 +144,14 @@ class RecentSearchesNotifier extends StateNotifier<List<String>> {
 
   void _save(List<String> entries) {
     state = entries;
-    _store.write(entries);
+    // Failures come back as values and are logged by StorageService; a lost
+    // recent-search list isn't worth interrupting the user.
+    unawaited(
+      StorageService.instance.setStringList(
+        StorageKeys.recentSearches,
+        entries,
+      ),
+    );
   }
 }
 
@@ -172,6 +175,10 @@ final currentArtistProvider =
     );
   });
 });
+
+// ═══════════════════════════════════════════════════════════
+// FEED — home feed ("For You" / "Following") and saved
+// ═══════════════════════════════════════════════════════════
 
 /// The API's artwork has no artist, like/comment counts or image size yet, so
 /// those fall back to neutral values until the backend returns them.
@@ -259,21 +266,65 @@ final feedProvider = StateNotifierProvider<LoadNotifier<List<Artwork>>,
   return notifier;
 });
 
-final exploreProvider = StateNotifierProvider<LoadNotifier<ExploreContent>,
-        RequestState<ExploreContent>>(
-    (ref) => LoadNotifier(ref.watch(discoverRepositoryProvider).explore));
+// ═══════════════════════════════════════════════════════════
+// EXPLORE — categories, trending tags, collections, artists, picks
+// ═══════════════════════════════════════════════════════════
 
-final trendingTagsProvider = StateNotifierProvider<LoadNotifier<List<String>>,
-    RequestState<List<String>>>(
-  (ref) => LoadNotifier(ref.watch(discoverRepositoryProvider).trendingTags),
+/// Live data from the `get_explore` function (supabase/explore.sql).
+final exploreProvider = StateNotifierProvider<LoadNotifier<ExploreContent>,
+    RequestState<ExploreContent>>((ref) {
+  final usecase = ref.watch(discoverUsecaseProvider);
+  return LoadNotifier(() => usecase.fetchExplore());
+});
+
+/// Trending tags are part of the explore data, so search reuses them.
+final trendingTagsProvider = Provider<RequestState<List<String>>>((ref) {
+  return switch (ref.watch(exploreProvider)) {
+    RequestSuccess(:final data) => RequestSuccess(data.trendingTags),
+    RequestFailure(:final failure) => RequestFailure(failure),
+    RequestLoading() => const RequestLoading(),
+    RequestInitial() => const RequestInitial(),
+  };
+});
+
+/// Category picked in the explore chip row; `null` means "All".
+final exploreCategoryProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
 );
+
+/// Explore content with artists and editor's picks narrowed to the selected
+/// category.
+final filteredExploreProvider =
+    Provider.autoDispose<RequestState<ExploreContent>>((ref) {
+  final explore = ref.watch(exploreProvider);
+  final category = ref.watch(exploreCategoryProvider);
+  if (category == null) return explore;
+  return switch (explore) {
+    RequestSuccess(:final data) => RequestSuccess((
+        categories: data.categories,
+        trendingTags: data.trendingTags,
+        collections: data.collections,
+        artists: data.artists
+            .where((artist) => artist.specialties.contains(category))
+            .toList(),
+        editorsPicks: data.editorsPicks
+            .where((artwork) => artwork.category == category)
+            .toList(),
+      )),
+    _ => explore,
+  };
+});
+
+// ═══════════════════════════════════════════════════════════
+// SHARED — follows, likes and bookmarks, used by feed and explore
+// ═══════════════════════════════════════════════════════════
 
 final followingProvider =
     StateNotifierProvider<ToggleSetNotifier, Set<String>>((ref) {
-  final repository = ref.watch(discoverRepositoryProvider);
+  final usecase = ref.watch(discoverUsecaseProvider);
   return ToggleSetNotifier(
-    (id, on) => repository.setFollowing(id, following: on),
-    load: repository.followingIds,
+    (id, on) => usecase.setFollowing(id, following: on),
+    load: usecase.getFollowingIds,
   );
 });
 
@@ -308,6 +359,8 @@ final bookmarkedProvider =
   );
 });
 
+// ── FEED (derived from feedProvider) ──────────────────────
+
 /// Feed narrowed to artists the user follows ("Following" tab).
 final followingFeedProvider = Provider<RequestState<List<Artwork>>>((ref) {
   final feed = ref.watch(feedProvider);
@@ -331,39 +384,15 @@ final savedArtworksProvider = Provider<RequestState<List<Artwork>>>((ref) {
   };
 });
 
-/// Category picked in the explore chip row; `null` means "All".
-final exploreCategoryProvider = StateProvider.autoDispose<String?>(
-  (ref) => null,
-);
-
-/// Explore content with artists and editor's picks narrowed to the selected
-/// category.
-final filteredExploreProvider =
-    Provider.autoDispose<RequestState<ExploreContent>>((ref) {
-  final explore = ref.watch(exploreProvider);
-  final category = ref.watch(exploreCategoryProvider);
-  if (category == null) return explore;
-  return switch (explore) {
-    RequestSuccess(:final data) => RequestSuccess((
-        categories: data.categories,
-        trendingTags: data.trendingTags,
-        collections: data.collections,
-        artists: data.artists
-            .where((artist) => artist.specialties.contains(category))
-            .toList(),
-        editorsPicks: data.editorsPicks
-            .where((artwork) => artwork.category == category)
-            .toList(),
-      )),
-    _ => explore,
-  };
-});
+// ═══════════════════════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════════════════════
 
 final searchProvider = StateNotifierProvider.autoDispose<SearchNotifier,
         RequestState<SearchResults>>(
-    (ref) => SearchNotifier(ref.watch(discoverRepositoryProvider)));
+    (ref) => SearchNotifier(ref.watch(discoverUsecaseProvider)));
 
 final recentSearchesProvider =
     StateNotifierProvider<RecentSearchesNotifier, List<String>>(
-  (ref) => RecentSearchesNotifier(RecentSearchStore()),
+  (ref) => RecentSearchesNotifier(),
 );

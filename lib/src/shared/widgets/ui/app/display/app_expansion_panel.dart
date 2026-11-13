@@ -102,8 +102,8 @@ class _AppExpansionPanelState extends State<AppExpansionPanel>
               ),
               child: Icon(
                 useCupertino
-                    ? CupertinoIcons.chevron_down
-                    : Icons.expand_more,
+                    ? AppIcons.chevronDown
+                    : AppIcons.chevronDown,
                 color: colors.onSurfaceVariant,
                 size: 22.sp,
               ),

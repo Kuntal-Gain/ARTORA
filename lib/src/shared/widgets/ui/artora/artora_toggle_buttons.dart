@@ -5,8 +5,8 @@ import '../../../../imports/imports.dart';
 /// Usage:
 /// ```dart
 /// AppToggleIconButton(
-///   icon: Icons.favorite_border_rounded,
-///   activeIcon: Icons.favorite_rounded,
+///   icon: AppIcons.like,
+///   activeIcon: AppIcons.likeFilled,
 ///   isActive: liked,
 ///   onChanged: (v) => ref.read(likeProvider.notifier).set(v),
 /// )
@@ -87,8 +87,8 @@ class AppLikeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AppToggleIconButton(
-        icon: Icons.favorite_border_rounded,
-        activeIcon: Icons.favorite_rounded,
+        icon: AppIcons.like,
+        activeIcon: AppIcons.likeFilled,
         isActive: isLiked,
         activeColor: context.colors.error,
         onChanged: onChanged,
@@ -112,8 +112,8 @@ class AppBookmarkButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AppToggleIconButton(
-        icon: Icons.bookmark_border_rounded,
-        activeIcon: Icons.bookmark_rounded,
+        icon: AppIcons.bookmark,
+        activeIcon: AppIcons.bookmarkFilled,
         isActive: isSaved,
         onChanged: onChanged,
         bordered: bordered,

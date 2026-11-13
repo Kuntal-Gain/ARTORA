@@ -5,7 +5,7 @@ import '../../../../../imports/imports.dart';
 /// Usage:
 /// ```dart
 /// AppEmptyState(
-///   icon: Icons.inbox_outlined,
+///   icon: AppIcons.inbox,
 ///   title: 'No messages yet',
 ///   subtitle: 'Your inbox will appear here.',
 ///   actionLabel: 'Refresh',
@@ -15,7 +15,7 @@ import '../../../../../imports/imports.dart';
 class AppEmptyState extends StatelessWidget {
   const AppEmptyState({
     super.key,
-    this.icon = Icons.inbox_outlined,
+    this.icon = AppIcons.inbox,
     required this.title,
     this.subtitle,
     this.actionLabel,

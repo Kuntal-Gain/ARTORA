@@ -129,7 +129,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       context,
                     ).backButtonTooltip,
                     icon: Icon(
-                      Icons.arrow_back_rounded,
+                      AppIcons.back,
                       color: colors.onSurface,
                     ),
                   ),
@@ -387,14 +387,14 @@ class _SearchInput extends StatelessWidget {
         fillColor: colors.surface,
         hintText: LocaleKeys.discover_search_hint_explore.tr(),
         contentPadding: EdgeInsets.symmetric(vertical: AppSpacing.ms),
-        prefixIcon: Icon(Icons.search_rounded, color: colors.onSurfaceVariant),
+        prefixIcon: Icon(AppIcons.search, color: colors.onSurfaceVariant),
         suffixIcon: controller.text.isEmpty
             ? null
             : IconButton(
                 onPressed: onClear,
                 tooltip: LocaleKeys.discover_clear_search.tr(),
                 icon: Icon(
-                  Icons.cancel_rounded,
+                  AppIcons.cancelFilled,
                   size: 20.r,
                   color: colors.onSurfaceVariant,
                 ),
@@ -432,7 +432,7 @@ class _RecentSearchRow extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              Icons.history_rounded,
+              AppIcons.history,
               size: 20.r,
               color: colors.onSurfaceVariant,
             ),
@@ -451,7 +451,7 @@ class _RecentSearchRow extends StatelessWidget {
               onPressed: onRemove,
               tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
               icon: Icon(
-                Icons.close_rounded,
+                AppIcons.close,
                 size: 20.r,
                 color: colors.onSurfaceVariant,
               ),

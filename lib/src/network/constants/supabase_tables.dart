@@ -38,5 +38,6 @@ abstract final class SupabaseRpc {
   static const String toggleLike = 'toggle_like';
   static const String toggleBookmark = 'toggle_bookmark';
   static const String toggleFollow = 'toggle_follow';
+  static const String getExplore = 'get_explore';
   static const String isUsernameAvailable = 'is_username_available';
 }

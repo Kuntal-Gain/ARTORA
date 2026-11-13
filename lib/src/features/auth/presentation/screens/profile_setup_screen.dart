@@ -187,7 +187,7 @@ Future<void> _submit() async {
                 label: LocaleKeys.auth_display_name.tr(),
                 hint: 'Alex Rivera',
                 controller: _name,
-                icon: const Icon(Icons.person_outline_rounded),
+                icon: const Icon(AppIcons.person),
                 validator: AppValidators.displayName,
                 enabled: !state.isLoading,
               ),
@@ -196,7 +196,7 @@ Future<void> _submit() async {
               //   label: LocaleKeys.auth_username.tr(),
               //   hint: 'alexrart',
               //   controller: _username,
-              //   icon: const Icon(Icons.alternate_email_rounded),
+              //   icon: const Icon(AppIcons.email),
               //   validator: _validateUsername,
               //   status: _usernameStatus(availability),
               //   onChanged: (value) => ref
@@ -208,7 +208,7 @@ Future<void> _submit() async {
   label: LocaleKeys.auth_username.tr(),
   hint: 'alexrart',
   controller: _username,
-  icon: const Icon(Icons.alternate_email_rounded),
+  icon: const Icon(AppIcons.email),
   validator: _validateUsername,
   status: _usernameStatus(availability),
   onChanged: (value) => ref
@@ -281,7 +281,7 @@ AnimatedSwitcher(
                 height: ButtonSize.small,
                 isLoading: state.isLoading,
                 suffixIcon: Icon(
-                  Icons.arrow_forward_rounded,
+                  AppIcons.forward,
                   size: 18.r,
                   color: colors.onPrimary,
                 ),
@@ -373,7 +373,7 @@ class _AvatarPicker extends StatelessWidget {
                               cacheWidth: cacheWidth,
                             )
                           : Icon(
-                              Icons.person_outline_rounded,
+                              AppIcons.person,
                               size: 48.r,
                               color: colors.onSurfaceVariant,
                             ),
@@ -393,7 +393,7 @@ class _AvatarPicker extends StatelessWidget {
                         ),
                       ),
                       child: Icon(
-                        Icons.camera_alt_rounded,
+                        AppIcons.camera,
                         size: 18.r,
                         color: colors.onPrimary,
                       ),

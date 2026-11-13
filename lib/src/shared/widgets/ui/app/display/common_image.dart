@@ -82,7 +82,7 @@ class CommonImage extends StatelessWidget {
       height: height,
       color: AppColors.imagePlaceholder,
       child:           const Icon(
-        Icons.error_outline,
+        AppIcons.error,
         color: AppColors.textDisabled,
           )
         ,

@@ -254,7 +254,7 @@ class _ArtworkEditorScreenState extends ConsumerState<ArtworkEditorScreen> {
         centerTitle: true,
         leading: IconButton(
           tooltip: 'Back',
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const Icon(AppIcons.back),
           onPressed: () =>
               context.canPop() ? context.pop() : context.go(AppRoutes.home),
         ),
@@ -434,7 +434,7 @@ class _ImageDropZone extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.image_outlined,
+                AppIcons.image,
                 size: 36.r,
                 color: AppColors.textPrimary,
               ),
@@ -544,7 +544,7 @@ class _ImagePreviewCard extends StatelessWidget {
                   onTap: onRemove,
                   tooltip: 'Remove image',
                   child: Icon(
-                    Icons.close_rounded,
+                    AppIcons.close,
                     size: 18.r,
                     color: AppColors.white,
                   ),
@@ -561,7 +561,7 @@ class _ImagePreviewCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.ios_share_rounded,
+                        AppIcons.share,
                         size: 16.r,
                         color: AppColors.white,
                       ),
@@ -750,7 +750,7 @@ class _CategoryField extends StatelessWidget {
           child: Row(
             children: [
               Icon(
-                Icons.image_outlined,
+                AppIcons.image,
                 size: 20.r,
                 color: AppColors.textPrimary,
               ),
@@ -764,7 +764,7 @@ class _CategoryField extends StatelessWidget {
                 ),
               ),
               Icon(
-                Icons.keyboard_arrow_down_rounded,
+                AppIcons.chevronDown,
                 color: AppColors.textPrimary,
                 size: 22.r,
               ),
@@ -808,7 +808,7 @@ class _CategorySheet extends ConsumerWidget {
                     ),
                     trailing: category.id == selectedId
                         ? const Icon(
-                            Icons.check_rounded,
+                            AppIcons.check,
                             color: AppColors.primary,
                           )
                         : null,
@@ -857,7 +857,7 @@ class _TagChip extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.all(AppSpacing.xs),
               child: Icon(
-                Icons.close_rounded,
+                AppIcons.close,
                 size: 14.r,
                 color: AppColors.textPrimary,
               ),
@@ -890,7 +890,7 @@ class _PrivateToggle extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            Icons.lock_outline_rounded,
+            AppIcons.lock,
             color: AppColors.textPrimary,
             size: 22.r,
           ),

@@ -120,14 +120,22 @@ class CategoryTile extends StatelessWidget {
         borderRadius: AppBorders.md,
         child: SizedBox(
           width: 70.r,
+          // Sized by its content (no fixed height anywhere), so it can't
+          // overflow; the row that holds the tiles grows with them.
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               ClipRRect(
                 borderRadius: AppBorders.lg,
-                child: CommonImage(
-                  imageUrl: category.imageUrl,
-                  width: size,
-                  height: size,
+                // White behind the image so transparent PNGs read as white.
+                child: ColoredBox(
+                  color: AppColors.white,
+                  child: CommonImage(
+                    imageUrl: category.imageUrl,
+                    width: size,
+                    height: size,
+                    fit: BoxFit.cover, // every image fills the same square
+                  ),
                 ),
               ),
               AppSpacing.vGap(AppSpacing.xs),

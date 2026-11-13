@@ -29,7 +29,7 @@ class AppFollowButton extends StatelessWidget {
       isLoading: isLoading,
       onPressed: onPressed,
       prefixIcon: isFollowing
-          ? Icon(Icons.check_rounded, size: 16.sp, color: context.colors.primary)
+          ? Icon(AppIcons.check, size: 16.sp, color: context.colors.primary)
           : null,
     );
   }

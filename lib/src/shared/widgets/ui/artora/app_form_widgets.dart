@@ -46,8 +46,8 @@ class AppPasswordRequirements extends StatelessWidget {
                   duration: AppDurations.fast,
                   child: Icon(
                     rule.met
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked_rounded,
+                        ? AppIcons.checkCircleFilled
+                        : AppIcons.radioUnchecked,
                     key: ValueKey(rule.met),
                     size: 16.sp,
                     color: rule.met ? success : cs.onSurfaceVariant,

@@ -52,6 +52,8 @@ Future<void> _bootstrap() async {
     category: LogCategory.backend,
   );
   await HiveService.instance.init();
+  // Single store for app preferences; must be ready before any provider reads.
+  await StorageService.instance.init();
 
   runApp(
     const LocalizationWrapper(

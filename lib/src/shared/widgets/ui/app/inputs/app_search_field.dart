@@ -109,7 +109,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
         prefix: Padding(
           padding: EdgeInsets.only(left: AppSpacing.sm),
           child: Icon(
-            CupertinoIcons.search,
+            AppIcons.search,
             size: 18.sp,
             color: cs.onSurfaceVariant,
           ),
@@ -120,7 +120,7 @@ class _AppSearchFieldState extends State<AppSearchField> {
                 minimumSize: Size.zero,
                 onPressed: _clear,
                 child: Icon(
-                  CupertinoIcons.clear_circled_solid,
+                  AppIcons.clearFilled,
                   size: 18.sp,
                   color: cs.onSurfaceVariant,
                 ),
@@ -149,11 +149,11 @@ class _AppSearchFieldState extends State<AppSearchField> {
       decoration: InputDecoration(
         hintText: widget.hint,
         isDense: true,
-        prefixIcon: Icon(Icons.search, color: cs.onSurfaceVariant),
+        prefixIcon: Icon(AppIcons.search, color: cs.onSurfaceVariant),
         suffixIcon: hasText
             ? IconButton(
                 onPressed: _clear,
-                icon: Icon(Icons.clear, color: cs.onSurfaceVariant),
+                icon: Icon(AppIcons.close, color: cs.onSurfaceVariant),
               )
             : null,
       ),

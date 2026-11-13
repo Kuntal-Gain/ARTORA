@@ -49,7 +49,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               border: Border.all(color: colors.primary, width: 1.5),
             ),
             child: Icon(
-              Icons.mail_outline_rounded,
+              AppIcons.mail,
               size: 30.r,
               color: colors.primary,
             ),
@@ -65,7 +65,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 label: LocaleKeys.auth_email.tr(),
                 hint: 'artist@example.com',
                 controller: _email,
-                icon: const Icon(Icons.mail_outline_rounded),
+                icon: const Icon(AppIcons.mail),
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.done,
                 validator: AppValidators.email,

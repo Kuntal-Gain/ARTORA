@@ -106,9 +106,9 @@ class AppTextField extends StatelessWidget {
       borderSide: BorderSide(color: success),
     );
     final statusIcon = isSuccess
-        ? Icon(Icons.check_circle_rounded, color: success, size: 20.sp)
+        ? Icon(AppIcons.checkCircleFilled, color: success, size: 20.sp)
         : isError
-            ? Icon(Icons.error_rounded, color: cs.error, size: 20.sp)
+            ? Icon(AppIcons.errorFilled, color: cs.error, size: 20.sp)
             : null;
 
     return TextFormField(

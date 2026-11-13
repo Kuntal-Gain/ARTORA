@@ -109,7 +109,7 @@ class AppChip extends StatelessWidget {
                 minimumSize: Size.square(28.w),
                 onPressed: onDeleted,
                 child: Icon(
-                  CupertinoIcons.clear_circled_solid,
+                  AppIcons.clearFilled,
                   size: 18.sp,
                   color: cs.onSurfaceVariant,
                 ),

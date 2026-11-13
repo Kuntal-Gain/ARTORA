@@ -31,7 +31,7 @@ class UiShowcaseScreen extends StatelessWidget {
                 onPressed: () {},
               ),
               AppIconButton(
-                icon: Icons.favorite_outline,
+                icon: AppIcons.like,
                 onPressed: () {},
               ),
               AppChip(label: 'Chip', selected: true, onSelected: (_) {}),

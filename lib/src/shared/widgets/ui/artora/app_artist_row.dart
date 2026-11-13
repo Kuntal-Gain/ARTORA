@@ -23,7 +23,7 @@ class AppArtistName extends StatelessWidget {
         ),
         if (isVerified) ...[
           SizedBox(width: AppSpacing.xs),
-          Icon(Icons.verified_rounded, size: 16.sp, color: context.colors.primary),
+          Icon(AppIcons.verified, size: 16.sp, color: context.colors.primary),
         ],
       ],
     );
@@ -110,7 +110,7 @@ class AppArtistRow extends StatelessWidget {
               IconButton(
                 onPressed: onMore,
                 tooltip: 'More',
-                icon: const Icon(Icons.more_vert_rounded),
+                icon: const Icon(AppIcons.more),
               ),
           ],
         ),

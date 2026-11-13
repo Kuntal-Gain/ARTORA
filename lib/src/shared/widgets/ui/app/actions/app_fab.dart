@@ -5,7 +5,7 @@ import '../../../../../imports/imports.dart';
 /// Usage:
 /// ```dart
 /// AppFab(
-///   icon: Icons.add,
+///   icon: AppIcons.add,
 ///   label: 'New task',
 ///   extended: true,
 ///   onPressed: _createTask,

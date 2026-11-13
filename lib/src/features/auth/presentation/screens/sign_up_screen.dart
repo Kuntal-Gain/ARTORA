@@ -83,7 +83,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 label: LocaleKeys.auth_display_name.tr(),
                 hint: 'Alex Rivera',
                 controller: _name,
-                icon: const Icon(Icons.person_outline_rounded),
+                icon: const Icon(AppIcons.person),
                 validator: AppValidators.displayName,
                 enabled: !state.isLoading,
               ),
@@ -92,7 +92,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 label: LocaleKeys.auth_username.tr(),
                 hint: 'alexrart',
                 controller: _username,
-                icon: const Icon(Icons.alternate_email_rounded),
+                icon: const Icon(AppIcons.email),
                 validator: AppValidators.username,
                 status: _statusOf(AppValidators.isValidUsername(_username.text)),
                 onChanged: (_) => setState(() {}),
@@ -103,7 +103,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 label: LocaleKeys.auth_email.tr(),
                 hint: 'alex@example.com',
                 controller: _email,
-                icon: const Icon(Icons.mail_outline_rounded),
+                icon: const Icon(AppIcons.mail),
                 keyboardType: TextInputType.emailAddress,
                 validator: AppValidators.email,
                 status: _statusOf(AppValidators.isValidEmail(_email.text)),
@@ -114,7 +114,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               AuthField(
                 label: LocaleKeys.auth_password.tr(),
                 controller: _password,
-                icon: const Icon(Icons.lock_outline_rounded),
+                icon: const Icon(AppIcons.lock),
                 obscure: true,
                 textInputAction: TextInputAction.done,
                 validator: AppValidators.newPassword,
@@ -221,7 +221,7 @@ class _PasswordRule extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            met ? Icons.check_circle_rounded : Icons.circle_outlined,
+            met ? AppIcons.checkCircleFilled : AppIcons.radioUnchecked,
             size: 18.r,
             color: color,
           ),

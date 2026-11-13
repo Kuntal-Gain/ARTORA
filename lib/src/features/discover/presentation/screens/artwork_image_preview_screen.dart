@@ -54,7 +54,7 @@ class _ArtworkImagePreviewScreenState extends State<ArtworkImagePreviewScreen> {
         centerTitle: true,
         leading: IconButton(
           tooltip: 'Back',
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const Icon(AppIcons.back),
           onPressed: () => context.pop(),
         ),
         title: Text(
@@ -114,11 +114,11 @@ class _ArtworkImagePreviewScreenState extends State<ArtworkImagePreviewScreen> {
                 child: Row(
                   children: [
                     for (final (mode, icon, label) in [
-                      (_PreviewMode.fit, Icons.fit_screen_outlined, 'Fit'),
-                      (_PreviewMode.fill, Icons.crop_free_rounded, 'Fill'),
+                      (_PreviewMode.fit, AppIcons.fit, 'Fit'),
+                      (_PreviewMode.fill, AppIcons.fill, 'Fill'),
                       (
                         _PreviewMode.original,
-                        Icons.photo_size_select_actual_outlined,
+                        AppIcons.original,
                         'Original',
                       ),
                     ])

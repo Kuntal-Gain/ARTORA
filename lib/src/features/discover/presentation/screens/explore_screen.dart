@@ -106,16 +106,27 @@ class _ExploreContent extends ConsumerWidget {
           },
         ),
         AppSpacing.vGap(AppSpacing.md),
-        HorizontalStrip(
-          height: 104.r,
-          itemCount: categories.length,
-          itemBuilder: (context, index) => CategoryTile(
-            category: categories[index],
-            onTap: () => SearchScreen.open(
-              context,
-              query: categories[index].name,
-              scope: SearchScope.artwork,
-            ),
+        // A plain scrolling Row (not a fixed-height list): its height is the
+        // tallest tile, so the labels can never overflow. Categories are a
+        // short list, so there's nothing to gain from lazy building.
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.pagePadding),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < categories.length; i++) ...[
+                if (i > 0) AppSpacing.hGap(AppSpacing.ms),
+                CategoryTile(
+                  category: categories[i],
+                  onTap: () => SearchScreen.open(
+                    context,
+                    query: categories[i].name,
+                    scope: SearchScope.artwork,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
         AppSpacing.vGap(AppSpacing.sm),
@@ -210,22 +221,32 @@ class _ExploreSkeleton extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              for (final width in [48.0, 120.0, 72.0, 130.0]) ...[
-                box(width.w, 36.h, AppBorders.md),
-                AppSpacing.hGap(AppSpacing.sm),
+          // Placeholder rows are wider than a phone screen; a non-scrolling
+          // scroll view clips them instead of overflowing.
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            child: Row(
+              children: [
+                for (final width in [48.0, 120.0, 72.0, 130.0]) ...[
+                  box(width.w, 36.h, AppBorders.md),
+                  AppSpacing.hGap(AppSpacing.sm),
+                ],
               ],
-            ],
+            ),
           ),
           AppSpacing.vGap(AppSpacing.md),
-          Row(
-            children: [
-              for (var i = 0; i < 5; i++) ...[
-                box(62.r, 62.r, AppBorders.lg),
-                AppSpacing.hGap(AppSpacing.ms),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            child: Row(
+              children: [
+                for (var i = 0; i < 5; i++) ...[
+                  box(62.r, 62.r, AppBorders.lg),
+                  AppSpacing.hGap(AppSpacing.ms),
+                ],
               ],
-            ],
+            ),
           ),
           AppSpacing.vGap(AppSpacing.lg),
           box(140.w, 18.h, AppBorders.sm),

@@ -21,8 +21,8 @@ class AppDrawerDestination {
 ///   selectedIndex: index,
 ///   onDestinationSelected: (i) => setState(() => index = i),
 ///   destinations: const [
-///     AppDrawerDestination(label: 'Home', icon: Icons.home_outlined),
-///     AppDrawerDestination(label: 'Settings', icon: Icons.settings_outlined),
+///     AppDrawerDestination(label: 'Home', icon: AppIcons.home),
+///     AppDrawerDestination(label: 'Settings', icon: AppIcons.settings),
 ///   ],
 /// )
 /// ```

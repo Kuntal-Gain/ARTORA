@@ -132,7 +132,7 @@ class AppCachedImage extends StatelessWidget {
       color: context.theme.colorScheme.errorContainer.withValues(alpha: 0.9),
       child: Center(
         child:           Icon(
-          Icons.broken_image_outlined,
+          AppIcons.brokenImage,
           color: context.theme.colorScheme.error,
           )
         ,

@@ -4,7 +4,7 @@ import '../../../../../imports/imports.dart';
 ///
 /// Usage:
 /// ```dart
-/// AppBadge(label: '3', child: Icon(Icons.notifications_outlined))
+/// AppBadge(label: '3', child: Icon(AppIcons.notifications))
 /// AppBadge(label: 'New', color: context.appColors.success)
 /// ```
 class AppBadge extends StatelessWidget {

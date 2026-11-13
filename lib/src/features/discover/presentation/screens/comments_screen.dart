@@ -77,7 +77,7 @@ class _CommentsScreenState extends ConsumerState<CommentsScreen> {
         centerTitle: true,
         leading: IconButton(
           tooltip: 'Back',
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const Icon(AppIcons.back),
           onPressed: () => context.pop(),
         ),
         title: Text(
@@ -311,7 +311,7 @@ class _CountRow extends StatelessWidget {
                     ?.copyWith(color: AppColors.textSecondary),
               ),
               Icon(
-                Icons.keyboard_arrow_down_rounded,
+                AppIcons.chevronDown,
                 size: 18.r,
                 color: AppColors.textSecondary,
               ),
@@ -421,7 +421,7 @@ class _Composer extends StatelessWidget {
                       InkWell(
                         onTap: onCancelReply,
                         child: Icon(
-                          Icons.close_rounded,
+                          AppIcons.close,
                           size: 18.r,
                           color: AppColors.textSecondary,
                         ),
@@ -496,7 +496,7 @@ class _Composer extends StatelessWidget {
                                   ),
                                 )
                               : Icon(
-                                  Icons.send_rounded,
+                                  AppIcons.send,
                                   size: 20.r,
                                   color: AppColors.white,
                                   semanticLabel: 'Send',

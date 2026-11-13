@@ -40,7 +40,6 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
                 child: ArtoraTopBar(
                   avatarUrl: me?.avatarUrl,
                   avatarInitials: me?.displayName,
-                  hasUnread: true,
                   onNotifications: () => showGlobalToast(
                     message: LocaleKeys.discover_notifications_coming_soon.tr(),
                   ),
@@ -96,7 +95,7 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
                       ),
                     RequestSuccess(:final data) when data.isEmpty =>
                       AppEmptyState(
-                        icon: Icons.people_outline_rounded,
+                        icon: AppIcons.people,
                         title: LocaleKeys.discover_following_empty_title.tr(),
                         subtitle:
                             LocaleKeys.discover_following_empty_subtitle.tr(),

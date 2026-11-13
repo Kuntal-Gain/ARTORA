@@ -52,10 +52,10 @@ void showToast(
       leading: AppIcon(
         icon: icon ??
             (toastStatus == 'success'
-                ? Icons.check_circle_outline
+                ? AppIcons.checkCircle
                 : toastStatus == 'error'
-                    ? Icons.error_outline
-                    : Icons.info_outline),
+                    ? AppIcons.error
+                    : AppIcons.info),
         color: iconColor,
         size: 22.sp,
       ),

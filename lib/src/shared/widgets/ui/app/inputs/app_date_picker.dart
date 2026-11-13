@@ -155,7 +155,7 @@ class AppDatePicker extends StatelessWidget {
               ),
             ),
             Icon(
-              useCupertino ? CupertinoIcons.calendar : Icons.calendar_today_outlined,
+              useCupertino ? AppIcons.calendar : AppIcons.calendar,
               size: 20.sp,
               color: cs.onSurfaceVariant,
             ),

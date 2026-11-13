@@ -7,8 +7,8 @@ import '../../../../../imports/imports.dart';
 /// AppListTile(
 ///   title: 'Settings',
 ///   subtitle: 'Notifications, privacy',
-///   leading: Icon(Icons.settings_outlined),
-///   trailing: Icon(Icons.chevron_right),
+///   leading: Icon(AppIcons.settings),
+///   trailing: Icon(AppIcons.chevronRight),
 ///   onTap: () {},
 /// )
 /// ```

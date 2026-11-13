@@ -72,8 +72,8 @@ class ArtworkTile extends StatelessWidget {
                           children: [
                             _OverlayStat(
                               icon: isLiked
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
+                                  ? AppIcons.likeFilled
+                                  : AppIcons.like,
                               color: isLiked ? colors.error : AppColors.white,
                               count: likes,
                               tooltip: LocaleKeys.discover_like.tr(),
@@ -81,7 +81,7 @@ class ArtworkTile extends StatelessWidget {
                             ),
                             AppSpacing.hGap(AppSpacing.ms),
                             _OverlayStat(
-                              icon: Icons.chat_bubble_outline_rounded,
+                              icon: AppIcons.comment,
                               color: AppColors.white,
                               count: artwork.comments,
                             ),
@@ -92,8 +92,8 @@ class ArtworkTile extends StatelessWidget {
                               visualDensity: VisualDensity.compact,
                               icon: Icon(
                                 isBookmarked
-                                    ? Icons.bookmark_rounded
-                                    : Icons.bookmark_border_rounded,
+                                    ? AppIcons.bookmarkFilled
+                                    : AppIcons.bookmark,
                                 size: 20.r,
                                 color: isBookmarked
                                     ? colors.primary

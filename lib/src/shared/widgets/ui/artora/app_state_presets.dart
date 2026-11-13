@@ -5,7 +5,7 @@ abstract final class AppEmptyPresets {
   AppEmptyPresets._();
 
   static Widget noArtwork({VoidCallback? onCreate}) => AppEmptyState(
-        icon: Icons.palette_outlined,
+        icon: AppIcons.palette,
         title: 'No Artwork Yet',
         subtitle: 'Share your first artwork with the community.',
         actionLabel: 'Create Artwork',
@@ -13,7 +13,7 @@ abstract final class AppEmptyPresets {
       );
 
   static Widget noSaved({VoidCallback? onExplore}) => AppEmptyState(
-        icon: Icons.bookmark_border_rounded,
+        icon: AppIcons.bookmark,
         title: 'No Saved Artwork',
         subtitle: 'Save artwork you love and get back to it anytime.',
         actionLabel: 'Explore',
@@ -21,7 +21,7 @@ abstract final class AppEmptyPresets {
       );
 
   static Widget noComments({VoidCallback? onComment}) => AppEmptyState(
-        icon: Icons.chat_bubble_outline_rounded,
+        icon: AppIcons.comment,
         title: 'No Comments Yet',
         subtitle: 'Be the first to share your thoughts.',
         actionLabel: 'Comment',
@@ -29,7 +29,7 @@ abstract final class AppEmptyPresets {
       );
 
   static Widget noResults({VoidCallback? onExplore}) => AppEmptyState(
-        icon: Icons.search_off_rounded,
+        icon: AppIcons.searchOff,
         title: 'No Results Found',
         subtitle: 'Try a different search term or explore categories.',
         actionLabel: 'Explore',
@@ -42,14 +42,14 @@ abstract final class AppErrorPresets {
   AppErrorPresets._();
 
   static Widget network({VoidCallback? onRetry}) => AppErrorWidget(
-        icon: Icons.wifi_off_rounded,
+        icon: AppIcons.wifiOff,
         title: 'Network Error',
         message: 'Something went wrong. Please check your connection.',
         onRetry: onRetry,
       );
 
   static Widget upload({VoidCallback? onRetry}) => AppErrorWidget(
-        icon: Icons.cloud_upload_outlined,
+        icon: AppIcons.cloudUpload,
         title: 'Upload Error',
         message: 'Failed to upload artwork. Please try again.',
         retryLabel: 'Retry',
@@ -57,7 +57,7 @@ abstract final class AppErrorPresets {
       );
 
   static Widget permission({VoidCallback? onBack}) => AppErrorWidget(
-        icon: Icons.lock_outline_rounded,
+        icon: AppIcons.lock,
         title: 'Permission Error',
         message: "You don't have permission to perform this action.",
         retryLabel: 'Go Back',

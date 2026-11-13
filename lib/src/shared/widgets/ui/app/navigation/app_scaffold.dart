@@ -7,7 +7,7 @@ import '../../../../../imports/imports.dart';
 /// AppScaffold(
 ///   appBar: AppTopBar(title: 'Home'),
 ///   body: HomeBody(),
-///   floatingActionButton: AppFab(onPressed: _add, icon: Icons.add),
+///   floatingActionButton: AppFab(onPressed: _add, icon: AppIcons.add),
 /// )
 /// ```
 class AppScaffold extends StatelessWidget {
