@@ -41,6 +41,12 @@ abstract final class AppRoutes {
   static String artistConnectionsPath(String id, {bool following = false}) =>
       '/artist/$id/connections?tab=${following ? 'following' : 'followers'}';
 
+  /// Likes, comments and new followers.
+  static const String notifications = '/notifications';
+
+  /// Create a collection.
+  static const String createCollection = '/collection/new';
+
   /// Image preview; pass the picked `File` as `extra`, pops with the result.
   static const String artworkPreview = '/artwork/preview';
 

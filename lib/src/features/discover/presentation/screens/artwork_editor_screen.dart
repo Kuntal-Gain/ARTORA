@@ -437,7 +437,7 @@ class _ImageDropZone extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: CustomPaint(
-        painter: _DashedBorderPainter(
+        painter: AppDashedBorderPainter(
           color: AppColors.textDisabled,
           radius: AppBorders.lg.topLeft.x,
         ),
@@ -488,39 +488,6 @@ class _ImageDropZone extends StatelessWidget {
       ),
     );
   }
-}
-
-class _DashedBorderPainter extends CustomPainter {
-  _DashedBorderPainter({required this.color, required this.radius});
-
-  final Color color;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
-    final path = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          Offset.zero & size,
-          Radius.circular(radius),
-        ),
-      );
-    const dash = 6.0;
-    const gap = 5.0;
-    for (final metric in path.computeMetrics()) {
-      for (var d = 0.0; d < metric.length; d += dash + gap) {
-        canvas.drawPath(metric.extractPath(d, d + dash), paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedBorderPainter old) =>
-      old.color != color || old.radius != radius;
 }
 
 class _ImagePreviewCard extends StatelessWidget {

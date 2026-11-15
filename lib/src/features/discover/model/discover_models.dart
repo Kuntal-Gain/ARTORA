@@ -1,3 +1,5 @@
+import 'package:artora/src/features/discover/model/collection_model.dart';
+
 /// An artist as shown on feed cards, artist rows and search results.
 class Artist {
   const Artist({
@@ -97,6 +99,7 @@ class SearchResults {
     this.artworks = const [],
     this.artists = const [],
     this.tags = const [],
+    this.collections = const [],
   });
 
   static const SearchResults empty = SearchResults();
@@ -104,6 +107,9 @@ class SearchResults {
   final List<Artwork> artworks;
   final List<Artist> artists;
   final List<String> tags;
+
+  /// Public collections matching the query (needs supabase/collections.sql).
+  final List<CollectionModel> collections;
 }
 
 /// Everything the explore screen shows, loaded in one go.
@@ -115,4 +121,4 @@ typedef ExploreContent = ({
   List<Artwork> editorsPicks,
 });
 
-enum SearchScope { all, artwork, artists, tags }
+enum SearchScope { all, artwork, artists, tags, collections }

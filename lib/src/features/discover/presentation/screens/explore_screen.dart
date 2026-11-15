@@ -1,10 +1,12 @@
 import 'package:artora/src/features/discover/model/discover_models.dart';
+import 'package:artora/src/features/discover/presentation/providers/collection_providers.dart';
 import 'package:artora/src/features/discover/presentation/providers/discover_providers.dart';
 import 'package:artora/src/features/discover/presentation/providers/follow_providers.dart';
 import 'package:artora/src/features/discover/presentation/screens/search_screen.dart';
 import 'package:artora/src/features/discover/presentation/widgets/artora_top_bar.dart';
 import 'package:artora/src/features/discover/presentation/widgets/discover_search_bar.dart';
 import 'package:artora/src/features/discover/presentation/widgets/explore_widgets.dart';
+import 'package:artora/src/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:artora/src/imports/imports.dart';
 
 class ExploreScreen extends ConsumerWidget {
@@ -18,59 +20,145 @@ class ExploreScreen extends ConsumerWidget {
     };
     final explore = ref.watch(filteredExploreProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        bottom: false,
-        child: RefreshIndicator(
-          onRefresh: () => ref.read(exploreProvider.notifier).refresh(),
-          child: CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: ArtoraTopBar(
-                  avatarUrl: me?.avatarUrl,
-                  avatarInitials: me?.displayName,
-                  onNotifications: () => showGlobalToast(
-                    message: LocaleKeys.discover_notifications_coming_soon.tr(),
-                  ),
-                  onAvatarTap: () => context.go(AppRoutes.profile),
-                ),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              ArtoraTopBar(
+                avatarUrl: me?.avatarUrl,
+                avatarInitials: me?.displayName,
+                hasUnread: ref.watch(unreadNotificationsProvider) > 0,
+                onNotifications: () => context.push(AppRoutes.notifications),
+                onAvatarTap: () => context.go(AppRoutes.profile),
               ),
-              SliverPadding(
+              Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: AppSpacing.pagePadding,
                 ),
-                sliver: SliverToBoxAdapter(
-                  child: DiscoverSearchBar(
-                    hint: LocaleKeys.discover_search_hint_explore.tr(),
-                    onTap: () => SearchScreen.open(context),
-                  ),
+                child: DiscoverSearchBar(
+                  hint: LocaleKeys.discover_search_hint_explore.tr(),
+                  onTap: () => SearchScreen.open(context),
                 ),
               ),
-              SliverToBoxAdapter(
-                child: switch (explore) {
-                  RequestInitial() ||
-                  RequestLoading() =>
-                    const _ExploreSkeleton(),
-                  RequestFailure() => Padding(
-                      padding: EdgeInsets.only(top: AppSpacing.xl),
-                      child: AppErrorPresets.network(
-                        onRetry: () =>
-                            ref.read(exploreProvider.notifier).refresh(),
+              AppSpacing.vGap(AppSpacing.sm),
+              TabBar(
+                labelColor: AppColors.primary,
+                unselectedLabelColor: AppColors.textSecondary,
+                labelStyle: context.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+                unselectedLabelStyle: context.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+                indicatorColor: AppColors.primary,
+                indicatorWeight: 3.r,
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: AppColors.border,
+                dividerHeight: 1,
+                tabs: [
+                  Tab(text: LocaleKeys.nav_explore.tr()),
+                  Tab(text: LocaleKeys.profile_collections.tr()),
+                ],
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    RefreshIndicator(
+                      onRefresh: () =>
+                          ref.read(exploreProvider.notifier).refresh(),
+                      child: CustomScrollView(
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: switch (explore) {
+                              RequestInitial() ||
+                              RequestLoading() =>
+                                const _ExploreSkeleton(),
+                              RequestFailure() => Padding(
+                                  padding: EdgeInsets.only(top: AppSpacing.xl),
+                                  child: AppErrorPresets.network(
+                                    onRetry: () => ref
+                                        .read(exploreProvider.notifier)
+                                        .refresh(),
+                                  ),
+                                ),
+                              RequestSuccess(:final data) =>
+                                _ExploreContent(content: data),
+                            },
+                          ),
+                          SliverToBoxAdapter(
+                            child: SizedBox(
+                              // Clear the floating bottom nav.
+                              height:
+                                  MediaQuery.paddingOf(context).bottom + 110.r,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  RequestSuccess(:final data) => _ExploreContent(content: data),
-                },
-              ),
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: MediaQuery.paddingOf(context).bottom + AppSpacing.md,
+                    const _CollectionsTab(),
+                  ],
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Trending public collections as cover cards; tapping one opens its owner.
+class _CollectionsTab extends ConsumerWidget {
+  const _CollectionsTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(trendingCollectionsProvider.notifier);
+    return RefreshIndicator(
+      onRefresh: notifier.refresh,
+      child: switch (ref.watch(trendingCollectionsProvider)) {
+        RequestInitial() || RequestLoading() => const AppLoading(),
+        RequestFailure(:final failure) => AppErrorWidget(
+            message: failure.message,
+            onRetry: notifier.refresh,
+          ),
+        RequestSuccess(:final data) when data.isEmpty => ListView(
+            // Scrollable so pull-to-refresh still works.
+            children: [
+              AppEmptyState(
+                icon: AppIcons.layers,
+                title: LocaleKeys.profile_no_collections.tr(),
+              ),
+            ],
+          ),
+        RequestSuccess(:final data) => ListView.separated(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.pagePadding,
+              AppSpacing.md,
+              AppSpacing.pagePadding,
+              MediaQuery.paddingOf(context).bottom + 110.r,
+            ),
+            itemCount: data.length,
+            separatorBuilder: (_, __) => AppSpacing.vGap(AppSpacing.ms),
+            // shortcut: no collection detail screen yet, so open the owner.
+            itemBuilder: (context, i) => AppCollectionCard(
+              title: data[i].title,
+              subtitle: LocaleKeys.collection_artwork_count.tr(
+                namedArgs: {'count': formatCompact(data[i].artworkCount)},
+              ),
+              imageUrl: data[i].coverUrl,
+              onTap: data[i].ownerId == null
+                  ? null
+                  : () => context.push(
+                        AppRoutes.artistProfilePath(data[i].ownerId!),
+                      ),
+            ),
+          ),
+      },
     );
   }
 }

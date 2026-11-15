@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:artora/src/features/discover/presentation/screens/artwork_detail_screen.dart';
 import 'package:artora/src/features/discover/presentation/screens/artwork_editor_screen.dart';
 import 'package:artora/src/features/discover/presentation/screens/comments_screen.dart';
+import 'package:artora/src/features/discover/presentation/screens/create_collection_screen.dart';
 import 'package:artora/src/features/discover/presentation/screens/artwork_image_preview_screen.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
@@ -18,6 +19,7 @@ import 'package:artora/src/features/discover/presentation/screens/explore_screen
 import 'package:artora/src/features/discover/presentation/screens/home_feed_screen.dart';
 import 'package:artora/src/features/discover/presentation/screens/saved_screen.dart';
 import 'package:artora/src/features/discover/presentation/screens/search_screen.dart';
+import 'package:artora/src/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:artora/src/features/onboarding/view/welcome_screen.dart';
 import 'package:artora/src/features/profile/presentation/screens/profile_screen.dart';
 import 'package:artora/src/features/profile/presentation/screens/follow_list_screen.dart';
@@ -103,6 +105,16 @@ final GoRouter appRouter = GoRouter(
       name: 'artworkComments',
       builder: (context, state) =>
           CommentsScreen(artworkId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: AppRoutes.notifications,
+      name: 'notifications',
+      builder: (context, state) => const NotificationsScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.createCollection,
+      name: 'createCollection',
+      builder: (context, state) => const CreateCollectionScreen(),
     ),
     GoRoute(
       path: AppRoutes.settings,

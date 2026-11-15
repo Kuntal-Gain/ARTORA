@@ -5,6 +5,7 @@ import 'package:artora/src/features/discover/presentation/widgets/artwork_masonr
 import 'package:artora/src/features/discover/presentation/widgets/discover_search_bar.dart';
 import 'package:artora/src/features/discover/presentation/widgets/masonry_grid.dart';
 import 'package:artora/src/features/discover/presentation/widgets/underline_tabs.dart';
+import 'package:artora/src/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:artora/src/imports/imports.dart';
 
 class HomeFeedScreen extends ConsumerStatefulWidget {
@@ -16,8 +17,6 @@ class HomeFeedScreen extends ConsumerStatefulWidget {
 
 class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
   bool _showFollowing = false;
-
-  
 
   @override
   Widget build(BuildContext context) {
@@ -40,9 +39,8 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
                 child: ArtoraTopBar(
                   avatarUrl: me?.avatarUrl,
                   avatarInitials: me?.displayName,
-                  onNotifications: () => showGlobalToast(
-                    message: LocaleKeys.discover_notifications_coming_soon.tr(),
-                  ),
+                  hasUnread: ref.watch(unreadNotificationsProvider) > 0,
+                  onNotifications: () => context.push(AppRoutes.notifications),
                   onAvatarTap: () => context.go(AppRoutes.profile),
                 ),
               ),

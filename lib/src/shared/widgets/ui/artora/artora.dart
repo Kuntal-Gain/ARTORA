@@ -12,3 +12,4 @@ export 'app_artwork_loading.dart';
 export 'app_auth_widgets.dart';
 export 'app_form_widgets.dart';
 export 'app_status_banner.dart';
+export 'app_collection_widgets.dart';

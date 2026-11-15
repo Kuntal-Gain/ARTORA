@@ -4,7 +4,6 @@ import 'package:artora/src/features/discover/presentation/providers/follow_provi
 import 'package:artora/src/features/discover/presentation/widgets/artwork_masonry.dart';
 import 'package:artora/src/features/discover/presentation/widgets/explore_widgets.dart';
 import 'package:artora/src/features/discover/presentation/widgets/masonry_grid.dart';
-import 'package:artora/src/features/discover/presentation/widgets/underline_tabs.dart';
 import 'package:artora/src/imports/imports.dart';
 import 'package:artora/src/shared/widgets/navigation/artora_bottom_nav.dart';
 
@@ -36,8 +35,22 @@ class SearchScreen extends ConsumerStatefulWidget {
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends ConsumerState<SearchScreen> {
+class _SearchScreenState extends ConsumerState<SearchScreen>
+    with TickerProviderStateMixin {
   static const int _visibleRecent = 5;
+
+  // Only drives the TabBar indicator; [_scope] stays the source of truth.
+  late final TabController _tabs = TabController(
+    length: SearchScope.values.length,
+    vsync: this,
+    initialIndex: widget.initialScope.index,
+  );
+
+  // Same idea for the result-type tabs under "All" (no "All" entry).
+  late final TabController _resultTabs = TabController(
+    length: SearchScope.values.length - 1,
+    vsync: this,
+  );
 
   late final TextEditingController _controller = TextEditingController(
     text: widget.initialQuery,
@@ -61,6 +74,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   void dispose() {
+    _tabs.dispose();
+    _resultTabs.dispose();
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -159,16 +174,33 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ],
               ),
             ),
-            UnderlineTabs(
-              labels: [
-                LocaleKeys.discover_all.tr(),
-                LocaleKeys.discover_artwork.tr(),
-                LocaleKeys.discover_artists.tr(),
-                LocaleKeys.discover_tags.tr(),
-              ],
-              selectedIndex: _scope.index,
-              onSelected: (index) =>
+            TabBar(
+              controller: _tabs,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+              labelColor: colors.primary,
+              unselectedLabelColor: colors.onSurfaceVariant,
+              labelStyle: context.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+              unselectedLabelStyle: context.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+              indicatorColor: colors.primary,
+              indicatorWeight: 3.r,
+              indicatorSize: TabBarIndicatorSize.label,
+              dividerColor: colors.outlineVariant,
+              dividerHeight: 1,
+              onTap: (index) =>
                   setState(() => _scope = SearchScope.values[index]),
+              tabs: [
+                Tab(text: LocaleKeys.discover_all.tr()),
+                Tab(text: LocaleKeys.discover_artwork.tr()),
+                Tab(text: LocaleKeys.discover_artists.tr()),
+                Tab(text: LocaleKeys.discover_tags.tr()),
+                Tab(text: LocaleKeys.profile_collections.tr()),
+              ],
             ),
             Expanded(
               child: ListView(
@@ -176,7 +208,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: EdgeInsets.only(
                   top: AppSpacing.sm,
-                  bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.md,
+                  // Clear the floating bottom nav (the body extends under it).
+                  bottom: MediaQuery.paddingOf(context).bottom + 110.r,
                 ),
                 children: [
                   if (recent.isNotEmpty) ...[
@@ -251,22 +284,53 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (_scope == SearchScope.all)
-              Padding(
-                padding: pagePadding,
-                child: UnderlineTabs(
-                  dense: true,
-                  labels: [
-                    _countLabel(
-                        LocaleKeys.discover_artwork, data.artworks.length),
-                    _countLabel(
-                        LocaleKeys.discover_artists, data.artists.length),
-                    _countLabel(LocaleKeys.discover_tags, data.tags.length),
-                  ],
-                  selectedIndex: _resultTab.index - 1,
-                  onSelected: (index) => setState(
-                    () => _resultTab = SearchScope.values[index + 1],
-                  ),
+              TabBar(
+                controller: _resultTabs,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                labelColor: context.colors.primary,
+                unselectedLabelColor: context.colors.onSurfaceVariant,
+                labelStyle: context.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
+                unselectedLabelStyle: context.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+                indicatorColor: context.colors.primary,
+                indicatorWeight: 3.r,
+                indicatorSize: TabBarIndicatorSize.label,
+                dividerColor: context.colors.outlineVariant,
+                dividerHeight: 1,
+                onTap: (index) => setState(
+                  () => _resultTab = SearchScope.values[index + 1],
+                ),
+                tabs: [
+                  Tab(
+                    text: _countLabel(
+                      LocaleKeys.discover_artwork,
+                      data.artworks.length,
+                    ),
+                  ),
+                  Tab(
+                    text: _countLabel(
+                      LocaleKeys.discover_artists,
+                      data.artists.length,
+                    ),
+                  ),
+                  Tab(
+                    text: _countLabel(
+                      LocaleKeys.discover_tags,
+                      data.tags.length,
+                    ),
+                  ),
+                  Tab(
+                    text: _countLabel(
+                      LocaleKeys.profile_collections,
+                      data.collections.length,
+                    ),
+                  ),
+                ],
               ),
             AppSpacing.vGap(AppSpacing.md),
             _ResultsBody(
@@ -337,6 +401,32 @@ class _ResultsBody extends ConsumerWidget {
             children: [
               for (final tag in results.tags)
                 SelectablePill(label: '#$tag', onTap: () => onTag(tag)),
+            ],
+          ),
+        );
+      case SearchScope.collections:
+        if (results.collections.isEmpty) return noResults;
+        return Padding(
+          padding: pagePadding,
+          child: Column(
+            children: [
+              for (final c in results.collections)
+                Padding(
+                  padding: EdgeInsets.only(bottom: AppSpacing.ms),
+                  // shortcut: no collection detail screen yet, so open the owner.
+                  child: AppCollectionCard(
+                    title: c.title,
+                    subtitle: LocaleKeys.collection_artwork_count.tr(
+                      namedArgs: {'count': formatCompact(c.artworkCount)},
+                    ),
+                    imageUrl: c.coverUrl,
+                    onTap: c.ownerId == null
+                        ? null
+                        : () => context.push(
+                              AppRoutes.artistProfilePath(c.ownerId!),
+                            ),
+                  ),
+                ),
             ],
           ),
         );

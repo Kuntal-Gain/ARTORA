@@ -15,6 +15,8 @@ abstract final class SupabaseTables {
   static const String bookmarks = 'bookmarks';
   static const String comments = 'comments';
   static const String follows = 'follows';
+  static const String collections = 'collections';
+  static const String collectionArtworks = 'collection_artworks';
   static const String notifications = 'notifications';
   static const String reports = 'reports';
   static const String blockedUsers = 'blocked_users';
@@ -42,5 +44,8 @@ abstract final class SupabaseRpc {
   static const String getUserById = 'get_user_by_id';
   static const String listFollowers = 'list_followers';
   static const String listFollowing = 'list_following';
+  static const String searchCollections = 'search_collections';
+  static const String listUserCollections = 'list_user_collections';
+  static const String trendingCollections = 'trending_collections';
   static const String isUsernameAvailable = 'is_username_available';
 }

@@ -84,6 +84,8 @@ abstract final class AppIcons {
   static const IconData fill = HugeIconsStroke.crop;
   static const IconData original = HugeIconsStroke.image02;
   static const IconData triangle = HugeIconsStroke.triangle;
+  static const IconData imageAdd = HugeIconsStroke.imageAdd01;
+  static const IconData layers = HugeIconsStroke.layers01;
 
   // ── Status & feedback ────────────────────────────────────
   static const IconData info = HugeIconsStroke.informationCircle;

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:artora/src/features/discover/model/artwork_model.dart';
+import 'package:artora/src/features/discover/model/collection_model.dart';
 import 'package:artora/src/features/discover/model/comment_model.dart';
 import 'package:artora/src/features/discover/model/discover_models.dart';
 import 'package:artora/src/network/client/sb_client.dart';
@@ -764,8 +765,22 @@ class DiscoverHelper {
     final models = [
       for (final row in artworkRows) ArtworkModel.fromJson(row),
     ];
+
+    // Public collections by title. Best effort: if collections.sql isn't
+    // applied yet this is empty rather than breaking the whole search.
+    final collectionRows = (await db.rpc<List<dynamic>>(
+          SupabaseRpc.searchCollections,
+          params: {'p_query': q, 'p_limit': pageSize, 'p_offset': 0},
+        ))
+            .dataOrNull ??
+        const <dynamic>[];
+
     return Resource<SearchResults>.success(
       SearchResults(
+        collections: [
+          for (final row in collectionRows)
+            CollectionModel.fromJson(Map<String, dynamic>.from(row as Map)),
+        ],
         artworks: [
           for (final m in models)
             Artwork(

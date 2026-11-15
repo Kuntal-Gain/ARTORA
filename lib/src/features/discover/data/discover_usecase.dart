@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/model/artwork_req_model.dart';
+import 'package:artora/src/features/discover/model/collection_model.dart';
 import 'package:artora/src/features/discover/model/comment_model.dart';
 import 'package:artora/src/features/discover/model/discover_models.dart';
 import 'package:artora/src/features/discover/model/follow_model.dart';
@@ -96,6 +99,56 @@ abstract class DiscoverUsecase {
 
   /// save/unsave a [Artwork]
   Future<Resource<void>> toggleSave(String artworkId);
+
+  // ═══════════════════════════════════════════════════════════
+  // COLLECTIONS — owner-made folders of artworks (needs supabase/collections.sql)
+  // ═══════════════════════════════════════════════════════════
+
+  /// create a collection owned by the signed-in user with an optional [cover]
+  /// image and [artworkIds] in that order; returns its id. Private unless
+  /// [isPublic].
+  Future<Resource<String>> createCollection(
+    String title, {
+    String? description,
+    bool isPublic = false,
+    File? cover,
+    List<String> artworkIds = const [],
+  });
+
+  /// add an artwork to your own collection; safe to repeat
+  Future<Resource<void>> addToCollection(
+    String collectionId,
+    String artworkId,
+  );
+
+  /// remove an artwork from your own collection
+  Future<Resource<void>> removeFromCollection(
+    String collectionId,
+    String artworkId,
+  );
+
+  /// delete your own collection (its artworks are not deleted)
+  Future<Resource<void>> deleteCollection(String collectionId);
+
+  /// collections owned by [userId]; private ones only show for yourself
+  Future<Resource<List<CollectionModel>>> getUserCollections(
+    String userId, {
+    int limit = 20,
+    int offset = 0,
+  });
+
+  /// public collections whose title matches [query]
+  Future<Resource<List<CollectionModel>>> searchCollections(
+    String query, {
+    int limit = 20,
+    int offset = 0,
+  });
+
+  /// public collections with the most recent likes and saves (`trending_collections` RPC)
+  Future<Resource<List<CollectionModel>>> getTrendingCollections({
+    int limit = 20,
+    int offset = 0,
+  });
 
   // ═══════════════════════════════════════════════════════════
   // COMMENTS — threads, replies, likes

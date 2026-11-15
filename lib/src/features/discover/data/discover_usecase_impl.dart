@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:artora/src/features/discover/data/discover_helper.dart';
 import 'package:artora/src/features/discover/data/discover_usecase.dart';
 import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/model/artwork_req_model.dart';
+import 'package:artora/src/features/discover/model/collection_model.dart';
 import 'package:artora/src/features/discover/model/comment_model.dart';
 import 'package:artora/src/features/discover/model/discover_models.dart';
 import 'package:artora/src/features/discover/model/follow_model.dart';
@@ -116,6 +119,162 @@ class DiscoverUsecaseImpl implements DiscoverUsecase {
       (rows) => [
         for (final row in rows)
           FollowUserModel.fromJson(Map<String, dynamic>.from(row as Map)),
+      ],
+    );
+  }
+
+  // ── COLLECTIONS ──────────────────────────────────────────
+  // Needs supabase/collections.sql. RLS limits writes to the owner.
+
+  @override
+  Future<Resource<String>> createCollection(
+    String title, {
+    String? description,
+    bool isPublic = false,
+    File? cover,
+    List<String> artworkIds = const [],
+  }) async {
+    final name = title.trim();
+    if (name.isEmpty || name.length > collectionTitleMax) {
+      return const Resource<String>.error(
+        ValidationFailure(
+          'Collection names must be 1–$collectionTitleMax characters.',
+        ),
+      );
+    }
+    final auth = await _h.authUserId();
+    if (auth case ResourceError<String>(:final failure)) {
+      return Resource<String>.error(failure);
+    }
+    final uid = (auth as ResourceSuccess<String>).data;
+
+    // Same upload path and checks as artwork images (own folder, 20 MB).
+    String? coverUrl;
+    if (cover != null) {
+      final uploaded = await _h.uploadImages(uid, [cover]);
+      if (uploaded case ResourceError<List<SBRow>>(:final failure)) {
+        return Resource<String>.error(failure);
+      }
+      coverUrl = (uploaded as ResourceSuccess<List<SBRow>>)
+          .data
+          .first['image_url'] as String?;
+    }
+
+    final about = description?.trim();
+    final created = await _h.db.post(SupabaseTables.collections, {
+      'owner_id': uid,
+      'title': name,
+      if (about != null && about.isNotEmpty) 'description': about,
+      if (coverUrl != null) 'cover_url': coverUrl,
+      'is_published': isPublic,
+    });
+    if (created case ResourceError<SBRow>(:final failure)) {
+      return Resource<String>.error(failure);
+    }
+    final id = (created as ResourceSuccess<SBRow>).data['id'] as String;
+    if (artworkIds.isEmpty) return Resource<String>.success(id);
+
+    final added = await _h.db.postMany(SupabaseTables.collectionArtworks, [
+      for (var i = 0; i < artworkIds.length; i++)
+        {'collection_id': id, 'artwork_id': artworkIds[i], 'position': i},
+    ]);
+    if (added case ResourceError<List<SBRow>>(:final failure)) {
+      // Don't leave a half-made collection behind.
+      await _h.db.delete(SupabaseTables.collections, eq: {'id': id});
+      return Resource<String>.error(failure);
+    }
+    return Resource<String>.success(id);
+  }
+
+  static const int collectionTitleMax = 60;
+
+  @override
+  Future<Resource<void>> addToCollection(
+    String collectionId,
+    String artworkId,
+  ) async {
+    final result = await _h.db.put(
+      SupabaseTables.collectionArtworks,
+      {'collection_id': collectionId, 'artwork_id': artworkId},
+      onConflict: 'collection_id,artwork_id',
+    );
+    return result.map<void>((_) {});
+  }
+
+  @override
+  Future<Resource<void>> removeFromCollection(
+    String collectionId,
+    String artworkId,
+  ) async {
+    final result = await _h.db.delete(
+      SupabaseTables.collectionArtworks,
+      eq: {'collection_id': collectionId, 'artwork_id': artworkId},
+    );
+    return result.map<void>((_) {});
+  }
+
+  @override
+  Future<Resource<void>> deleteCollection(String collectionId) async {
+    final result = await _h.db.delete(
+      SupabaseTables.collections,
+      eq: {'id': collectionId},
+    );
+    // RLS hides collections you don't own, so nothing is deleted.
+    if (result case ResourceSuccess<List<SBRow>>(:final data)
+        when data.isEmpty) {
+      return const Resource<void>.error(
+        NotFoundFailure(
+          'Collection not found or you do not own it.',
+          statusCode: 404,
+        ),
+      );
+    }
+    return result.map<void>((_) {});
+  }
+
+  @override
+  Future<Resource<List<CollectionModel>>> getUserCollections(
+    String userId, {
+    int limit = 20,
+    int offset = 0,
+  }) =>
+      _collectionList(SupabaseRpc.listUserCollections, {
+        'p_uid': userId,
+        'p_limit': limit,
+        'p_offset': offset,
+      });
+
+  @override
+  Future<Resource<List<CollectionModel>>> searchCollections(
+    String query, {
+    int limit = 20,
+    int offset = 0,
+  }) =>
+      _collectionList(SupabaseRpc.searchCollections, {
+        'p_query': query,
+        'p_limit': limit,
+        'p_offset': offset,
+      });
+
+  @override
+  Future<Resource<List<CollectionModel>>> getTrendingCollections({
+    int limit = 20,
+    int offset = 0,
+  }) =>
+      _collectionList(SupabaseRpc.trendingCollections, {
+        'p_limit': limit,
+        'p_offset': offset,
+      });
+
+  Future<Resource<List<CollectionModel>>> _collectionList(
+    String function,
+    Map<String, dynamic> params,
+  ) async {
+    final result = await _h.db.rpc<List<dynamic>>(function, params: params);
+    return result.map(
+      (rows) => [
+        for (final row in rows)
+          CollectionModel.fromJson(Map<String, dynamic>.from(row as Map)),
       ],
     );
   }
