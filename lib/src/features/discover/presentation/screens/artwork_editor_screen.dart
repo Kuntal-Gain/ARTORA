@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/model/artwork_req_model.dart';
+import 'package:artora/src/features/discover/presentation/widgets/masonry_grid.dart';
 import 'package:artora/src/features/discover/state/artwork_provider.dart';
 import 'package:artora/src/imports/imports.dart';
 
@@ -109,7 +110,12 @@ class _ArtworkEditorScreenState extends ConsumerState<ArtworkEditorScreen> {
     _tagInput.clear();
     if (tag.isEmpty || _tags.contains(tag)) return;
     if (_tags.length >= _maxTags) {
-      showGlobalToast(message: 'You can add up to 10 tags.', status: 'error');
+      showGlobalToast(
+        message: LocaleKeys.editor_max_tags.tr(
+          namedArgs: {'max': '$_maxTags'},
+        ),
+        status: 'error',
+      );
       return;
     }
     setState(() => _tags = [..._tags, tag]);
@@ -149,7 +155,7 @@ class _ArtworkEditorScreenState extends ConsumerState<ArtworkEditorScreen> {
   Future<void> _submitCreate({required bool draft}) async {
     if (!_canPublish) {
       showGlobalToast(
-        message: 'Add an image, a title and a category first.',
+        message: LocaleKeys.editor_missing_fields.tr(),
         status: 'error',
       );
       return;
@@ -173,13 +179,7 @@ class _ArtworkEditorScreenState extends ConsumerState<ArtworkEditorScreen> {
   }
 
   Future<void> _delete() async {
-    final confirmed = await showAppAlertDialog(
-      context,
-      title: 'Delete artwork?',
-      message: 'This artwork will be removed permanently.',
-      confirmLabel: 'Delete',
-      isDestructive: true,
-    );
+    final confirmed = await AppDialogPresets.deleteArtwork(context);
     if (confirmed != true) return;
     await ref.read(deleteArtworkProvider(widget.artworkId!).notifier).submit();
   }
@@ -214,17 +214,22 @@ class _ArtworkEditorScreenState extends ConsumerState<ArtworkEditorScreen> {
         (prev, next) => _onResult(
           prev,
           next,
-          _submittingAs == 'draft' ? 'Draft saved' : 'Artwork published',
+          (_submittingAs == 'draft'
+                  ? LocaleKeys.editor_draft_saved
+                  : LocaleKeys.editor_published)
+              .tr(),
         ),
       );
     } else {
       ref.listen(
         updateArtworkProvider(id),
-        (prev, next) => _onResult(prev, next, 'Changes saved'),
+        (prev, next) =>
+            _onResult(prev, next, LocaleKeys.editor_changes_saved.tr()),
       );
       ref.listen(
         deleteArtworkProvider(id),
-        (prev, next) => _onResult(prev, next, 'Artwork deleted'),
+        (prev, next) =>
+            _onResult(prev, next, LocaleKeys.editor_deleted.tr()),
       );
     }
 
@@ -253,13 +258,14 @@ class _ArtworkEditorScreenState extends ConsumerState<ArtworkEditorScreen> {
         surfaceTintColor: AppColors.transparent,
         centerTitle: true,
         leading: IconButton(
-          tooltip: 'Back',
+          tooltip: LocaleKeys.common_back.tr(),
           icon: const Icon(AppIcons.back),
           onPressed: () =>
               context.canPop() ? context.pop() : context.go(AppRoutes.home),
         ),
         title: Text(
-          _isEdit ? 'Edit Artwork' : 'Create Artwork',
+          (_isEdit ? LocaleKeys.editor_edit_title : LocaleKeys.editor_create_title)
+              .tr(),
           style: context.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -302,28 +308,35 @@ class _ArtworkEditorScreenState extends ConsumerState<ArtworkEditorScreen> {
               else
                 _ImageDropZone(onTap: _pickImage),
               AppSpacing.vGap(AppSpacing.lg),
-              const _Label('Title', required: true),
+              _Label(LocaleKeys.editor_title_label.tr(), required: true),
               _Input(
                 controller: _title,
-                hint: 'Enter artwork title',
+                hint: LocaleKeys.editor_title_hint.tr(),
                 maxLength: _maxTitle,
               ),
               _Counter(_title.text.length, _maxTitle),
-              const _Label('Description'),
+              _Label(LocaleKeys.editor_description_label.tr()),
               _Input(
                 controller: _description,
-                hint: 'Share the story behind your artwork...',
+                hint: LocaleKeys.editor_description_hint.tr(),
                 maxLength: _maxDescription,
                 maxLines: 4,
               ),
               _Counter(_description.text.length, _maxDescription),
-              const _Label('Category', required: true),
+              _Label(LocaleKeys.editor_category_label.tr(), required: true),
               _CategoryField(category: _category, onTap: _pickCategory),
               AppSpacing.vGap(AppSpacing.ml),
               _Label(
                 _tags.isEmpty
-                    ? 'Tags (up to $_maxTags)'
-                    : 'Tags (${_tags.length}/$_maxTags)',
+                    ? LocaleKeys.editor_tags_up_to.tr(
+                        namedArgs: {'max': '$_maxTags'},
+                      )
+                    : LocaleKeys.editor_tags_count.tr(
+                        namedArgs: {
+                          'count': '${_tags.length}',
+                          'max': '$_maxTags',
+                        },
+                      ),
               ),
               if (_tags.isNotEmpty) ...[
                 Wrap(
@@ -339,7 +352,7 @@ class _ArtworkEditorScreenState extends ConsumerState<ArtworkEditorScreen> {
               _Input(
                 controller: _tagInput,
                 focusNode: _tagFocus,
-                hint: 'Type a tag and press enter',
+                hint: LocaleKeys.editor_tag_hint.tr(),
                 enabled: _tags.length < _maxTags,
                 textInputAction: TextInputAction.done,
                 onSubmitted: _addTag,
@@ -367,7 +380,7 @@ class _ArtworkEditorScreenState extends ConsumerState<ArtworkEditorScreen> {
                 ? [
                     Expanded(
                       child: _OutlineAction(
-                        label: 'Delete Artwork',
+                        label: LocaleKeys.editor_delete_artwork.tr(),
                         color: AppColors.error,
                         isLoading: deleteState is RequestLoading,
                         onPressed: busy ? null : _delete,
@@ -376,7 +389,7 @@ class _ArtworkEditorScreenState extends ConsumerState<ArtworkEditorScreen> {
                     AppSpacing.hGap(AppSpacing.ms),
                     Expanded(
                       child: _PrimaryAction(
-                        label: 'Save Changes',
+                        label: LocaleKeys.editor_save_changes.tr(),
                         isLoading: updateState is RequestLoading,
                         onPressed: busy || !_canPublish ? null : _submitEdit,
                       ),
@@ -385,7 +398,7 @@ class _ArtworkEditorScreenState extends ConsumerState<ArtworkEditorScreen> {
                 : [
                     Expanded(
                       child: _OutlineAction(
-                        label: 'Save as Draft',
+                        label: LocaleKeys.editor_save_draft.tr(),
                         color: AppColors.textPrimary,
                         isLoading: busy && _submittingAs == 'draft',
                         onPressed: busy || !_canPublish
@@ -396,7 +409,7 @@ class _ArtworkEditorScreenState extends ConsumerState<ArtworkEditorScreen> {
                     AppSpacing.hGap(AppSpacing.ms),
                     Expanded(
                       child: _PrimaryAction(
-                        label: 'Publish',
+                        label: LocaleKeys.editor_publish.tr(),
                         isLoading: busy && _submittingAs == 'public',
                         onPressed: busy || !_canPublish
                             ? null
@@ -440,7 +453,7 @@ class _ImageDropZone extends StatelessWidget {
               ),
               AppSpacing.vGap(AppSpacing.ms),
               Text(
-                'Tap to select image',
+                LocaleKeys.editor_tap_select.tr(),
                 style: textTheme.titleSmall?.copyWith(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w600,
@@ -448,7 +461,7 @@ class _ImageDropZone extends StatelessWidget {
               ),
               AppSpacing.vGap(AppSpacing.xs),
               Text(
-                'PNG, JPG, WebP • Max 20 MB',
+                LocaleKeys.editor_image_formats.tr(),
                 style: textTheme.bodySmall?.copyWith(
                   color: AppColors.textSecondary,
                 ),
@@ -467,7 +480,7 @@ class _ImageDropZone extends StatelessWidget {
                     borderRadius: AppBorders.sm,
                   ),
                 ),
-                child: const Text('Select Image'),
+                child: Text(LocaleKeys.editor_select_image.tr()),
               ),
             ],
           ),
@@ -542,7 +555,7 @@ class _ImagePreviewCard extends StatelessWidget {
                 right: AppSpacing.sm,
                 child: _GlassButton(
                   onTap: onRemove,
-                  tooltip: 'Remove image',
+                  tooltip: LocaleKeys.editor_remove_image.tr(),
                   child: Icon(
                     AppIcons.close,
                     size: 18.r,
@@ -567,7 +580,7 @@ class _ImagePreviewCard extends StatelessWidget {
                       ),
                       AppSpacing.hGap(AppSpacing.xs),
                       Text(
-                        'Change Image',
+                        LocaleKeys.editor_change_image.tr(),
                         style: context.textTheme.labelMedium?.copyWith(
                           color: AppColors.white,
                         ),
@@ -749,15 +762,11 @@ class _CategoryField extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(
-                AppIcons.image,
-                size: 20.r,
-                color: AppColors.textPrimary,
-              ),
+              _CategoryAvatar(url: category?.imageUrl ?? '', size: 28.r),
               AppSpacing.hGap(AppSpacing.ms),
               Expanded(
                 child: Text(
-                  category?.name ?? 'Select category',
+                  category?.name ?? LocaleKeys.editor_select_category.tr(),
                   style: context.textTheme.bodyMedium?.copyWith(
                     color: AppColors.textPrimary,
                   ),
@@ -776,10 +785,140 @@ class _CategoryField extends StatelessWidget {
   }
 }
 
+/// Round category image; falls back to the generic icon when there is none.
+class _CategoryAvatar extends StatelessWidget {
+  const _CategoryAvatar({required this.url, required this.size});
+
+  final String url;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.isEmpty) {
+      return Icon(AppIcons.image, size: size * 0.7, color: AppColors.textPrimary);
+    }
+    return ClipRRect(
+      borderRadius: AppBorders.md,
+      // White behind the image so transparent PNGs read as white.
+      child: ColoredBox(
+        color: AppColors.white,
+        child: CommonImage(
+          imageUrl: url,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+        ),
+      ),
+    );
+  }
+}
+
+/// Category image with a dark vignette at the bottom carrying the label.
+class _CategoryGridTile extends StatelessWidget {
+  const _CategoryGridTile({
+    required this.category,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final ArtworkCategoryModel category;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: DecoratedBox(
+        // Foreground, otherwise the image paints over the border.
+        position: DecorationPosition.foreground,
+        decoration: BoxDecoration(
+          borderRadius: AppBorders.md,
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.transparent,
+            width: 3,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: AppBorders.md,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (category.imageUrl.isEmpty)
+                const ColoredBox(color: AppColors.surface)
+              else
+                CommonImage(imageUrl: category.imageUrl, fit: BoxFit.cover),
+              // Vignette: transparent at the top fading to dark behind the label.
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.center,
+                    end: Alignment.bottomCenter,
+                    colors: [AppColors.transparent, AppColors.scrim],
+                  ),
+                ),
+              ),
+              Positioned(
+                left: AppSpacing.ms,
+                // Leave room for the check badge so the label doesn't run under it.
+                right: selected ? 24.r + AppSpacing.md : AppSpacing.ms,
+                bottom: AppSpacing.sm,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        category.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textTheme.labelLarge?.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (selected)
+                Positioned(
+                  right: AppSpacing.sm,
+                  bottom: AppSpacing.sm,
+                  child: Container(
+                    width: 24.r,
+                    height: 24.r,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: AppBorders.sm,
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(AppSpacing.xs),
+                      // Default icon size (24) would fill the badge edge to edge.
+                      child: const FittedBox(
+                        child: Icon(
+                          AppIcons.check,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CategorySheet extends ConsumerWidget {
   const _CategorySheet({this.selectedId});
 
   final String? selectedId;
+
+  // Categories have no image size, so vary tile heights by position instead.
+  static const _ratios = [1.0, 0.8, 0.8, 1.0, 0.9, 1.1];
+  static double _tileRatio(int index) => _ratios[index % _ratios.length];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -787,7 +926,7 @@ class _CategorySheet extends ConsumerWidget {
     return SafeArea(
       top: false,
       child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.5,
+        height: MediaQuery.sizeOf(context).height * 0.65,
         child: switch (state) {
           RequestInitial() || RequestLoading() => const AppLoading(),
           RequestFailure(:final failure) => AppErrorWidget(
@@ -795,26 +934,29 @@ class _CategorySheet extends ConsumerWidget {
               onRetry: () =>
                   ref.read(artworkCategoriesProvider.notifier).refresh(),
             ),
-          RequestSuccess(:final data) when data.isEmpty => const Center(
-              child: Text('No categories available'),
+          RequestSuccess(:final data) when data.isEmpty => Center(
+              child: Text(LocaleKeys.editor_no_categories.tr()),
             ),
-          RequestSuccess(:final data) => ListView(
-              children: [
-                for (final category in data)
-                  ListTile(
-                    title: Text(
-                      category.name,
-                      style: const TextStyle(color: AppColors.textPrimary),
-                    ),
-                    trailing: category.id == selectedId
-                        ? const Icon(
-                            AppIcons.check,
-                            color: AppColors.primary,
-                          )
-                        : null,
+          RequestSuccess(:final data) => SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.pagePadding,
+                AppSpacing.sm,
+                AppSpacing.pagePadding,
+                AppSpacing.md,
+              ),
+              child: MasonryGrid<ArtworkCategoryModel>(
+                items: data,
+                footerExtent: 0,
+                aspectRatioOf: (c) => _tileRatio(data.indexOf(c)),
+                itemBuilder: (context, category) => AspectRatio(
+                  aspectRatio: _tileRatio(data.indexOf(category)),
+                  child: _CategoryGridTile(
+                    category: category,
+                    selected: category.id == selectedId,
                     onTap: () => Navigator.of(context).pop(category),
                   ),
-              ],
+                ),
+              ),
             ),
         },
       ),
@@ -900,14 +1042,14 @@ class _PrivateToggle extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Set as private',
+                  LocaleKeys.editor_private_title.tr(),
                   style: context.textTheme.titleSmall?.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 Text(
-                  'Only you can see this artwork',
+                  LocaleKeys.editor_private_subtitle.tr(),
                   style: context.textTheme.bodySmall?.copyWith(
                     color: AppColors.textSecondary,
                   ),

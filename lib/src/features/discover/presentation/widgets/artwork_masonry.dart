@@ -1,5 +1,6 @@
 import 'package:artora/src/features/discover/model/discover_models.dart';
 import 'package:artora/src/features/discover/presentation/providers/discover_providers.dart';
+import 'package:artora/src/features/discover/presentation/providers/follow_providers.dart';
 import 'package:artora/src/features/discover/presentation/widgets/artwork_tile.dart';
 import 'package:artora/src/features/discover/presentation/widgets/masonry_grid.dart';
 import 'package:artora/src/imports/imports.dart';

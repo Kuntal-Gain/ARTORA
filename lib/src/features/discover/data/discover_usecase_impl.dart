@@ -4,6 +4,7 @@ import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/model/artwork_req_model.dart';
 import 'package:artora/src/features/discover/model/comment_model.dart';
 import 'package:artora/src/features/discover/model/discover_models.dart';
+import 'package:artora/src/features/discover/model/follow_model.dart';
 import 'package:artora/src/network/client/sb_client.dart';
 import 'package:artora/src/network/constants/supabase_tables.dart';
 import 'package:artora/src/network/failures/failure.dart';
@@ -75,6 +76,48 @@ class DiscoverUsecaseImpl implements DiscoverUsecase {
           )
         : await _h.db.delete(SupabaseTables.follows, eq: row);
     return result.map<void>((_) {});
+  }
+
+  @override
+  Future<Resource<void>> followUser(String userId) =>
+      setFollowing(userId, following: true);
+
+  @override
+  Future<Resource<void>> unfollowUser(String userId) =>
+      setFollowing(userId, following: false);
+
+  @override
+  Future<Resource<List<FollowUserModel>>> getFollowers(
+    String userId, {
+    int limit = 50,
+    int offset = 0,
+  }) =>
+      _followList(SupabaseRpc.listFollowers, userId, limit, offset);
+
+  @override
+  Future<Resource<List<FollowUserModel>>> getFollowings(
+    String userId, {
+    int limit = 50,
+    int offset = 0,
+  }) =>
+      _followList(SupabaseRpc.listFollowing, userId, limit, offset);
+
+  Future<Resource<List<FollowUserModel>>> _followList(
+    String function,
+    String userId,
+    int limit,
+    int offset,
+  ) async {
+    final result = await _h.db.rpc<List<dynamic>>(
+      function,
+      params: {'p_uid': userId, 'p_limit': limit, 'p_offset': offset},
+    );
+    return result.map(
+      (rows) => [
+        for (final row in rows)
+          FollowUserModel.fromJson(Map<String, dynamic>.from(row as Map)),
+      ],
+    );
   }
 
   // ── GET USER FEED ────────────────────────────────────────
@@ -364,7 +407,7 @@ class DiscoverUsecaseImpl implements DiscoverUsecase {
   Future<Resource<List<ArtworkCategoryModel>>> getCategories() async {
     final result = await _h.db.get(
       SupabaseTables.categories,
-      columns: 'id,name,slug',
+      columns: 'id,name,slug,cover_url',
       orderBy: 'name',
     );
     return result.map(

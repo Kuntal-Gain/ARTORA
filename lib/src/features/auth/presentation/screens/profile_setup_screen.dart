@@ -109,14 +109,14 @@ Future<void> _submit() async {
 
     case RequestSuccess<bool>(data: true):
       showGlobalToast(
-        message: 'This username is already taken.',
+        message: LocaleKeys.profile_setup_username_taken_toast.tr(),
         status: 'error',
       );
       return;
 
     case RequestLoading():
       showGlobalToast(
-        message: 'Checking username, please wait...',
+        message: LocaleKeys.profile_setup_username_checking_wait.tr(),
         status: 'error',
       );
       return;
@@ -124,7 +124,7 @@ Future<void> _submit() async {
     case RequestFailure():
     case RequestInitial():
       showGlobalToast(
-        message: 'Username is not verified. Please try again.',
+        message: LocaleKeys.profile_setup_username_not_verified.tr(),
         status: 'error',
       );
       return;
@@ -235,7 +235,7 @@ AnimatedSwitcher(
               ),
               SizedBox(width: 8.r),
               Text(
-                'Checking username...',
+                LocaleKeys.profile_setup_username_checking.tr(),
                 style: context.textTheme.bodySmall?.copyWith(
                   color: colors.primary,
                   fontWeight: FontWeight.w500,

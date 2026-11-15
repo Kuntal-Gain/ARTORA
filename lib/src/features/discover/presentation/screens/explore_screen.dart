@@ -1,5 +1,6 @@
 import 'package:artora/src/features/discover/model/discover_models.dart';
 import 'package:artora/src/features/discover/presentation/providers/discover_providers.dart';
+import 'package:artora/src/features/discover/presentation/providers/follow_providers.dart';
 import 'package:artora/src/features/discover/presentation/screens/search_screen.dart';
 import 'package:artora/src/features/discover/presentation/widgets/artora_top_bar.dart';
 import 'package:artora/src/features/discover/presentation/widgets/discover_search_bar.dart';

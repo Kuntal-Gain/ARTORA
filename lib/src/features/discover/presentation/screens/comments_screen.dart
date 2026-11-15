@@ -76,12 +76,12 @@ class _CommentsScreenState extends ConsumerState<CommentsScreen> {
         surfaceTintColor: AppColors.transparent,
         centerTitle: true,
         leading: IconButton(
-          tooltip: 'Back',
+          tooltip: LocaleKeys.common_back.tr(),
           icon: const Icon(AppIcons.back),
           onPressed: () => context.pop(),
         ),
         title: Text(
-          'Comments',
+          LocaleKeys.comments_title.tr(),
           style: textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -142,8 +142,7 @@ class _CommentsScreenState extends ConsumerState<CommentsScreen> {
                         Padding(
                           padding: EdgeInsets.only(top: AppSpacing.xl),
                           child: Text(
-                            'No comments yet. Be the first to share your '
-                            'thoughts!',
+                            LocaleKeys.comments_empty.tr(),
                             textAlign: TextAlign.center,
                             style: textTheme.bodyMedium
                                 ?.copyWith(color: AppColors.textSecondary),
@@ -288,7 +287,9 @@ class _CountRow extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            '${formatCompact(total)} Comments',
+            LocaleKeys.comments_count.tr(
+              namedArgs: {'count': formatCompact(total)},
+            ),
             style: textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
@@ -298,15 +299,24 @@ class _CountRow extends StatelessWidget {
         PopupMenuButton<bool>(
           color: AppColors.elevated,
           onSelected: onSort,
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: true, child: Text('Newest')),
-            PopupMenuItem(value: false, child: Text('Oldest')),
+          itemBuilder: (_) => [
+            PopupMenuItem(
+              value: true,
+              child: Text(LocaleKeys.comments_newest.tr()),
+            ),
+            PopupMenuItem(
+              value: false,
+              child: Text(LocaleKeys.comments_oldest.tr()),
+            ),
           ],
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                newestFirst ? 'Newest' : 'Oldest',
+                (newestFirst
+                        ? LocaleKeys.comments_newest
+                        : LocaleKeys.comments_oldest)
+                    .tr(),
                 style: textTheme.bodySmall
                     ?.copyWith(color: AppColors.textSecondary),
               ),
@@ -350,8 +360,12 @@ class _RepliesToggle extends StatelessWidget {
               AppSpacing.hGap(AppSpacing.sm),
               Text(
                 expanded
-                    ? 'Hide replies'
-                    : 'View $count ${count == 1 ? 'reply' : 'replies'}',
+                    ? LocaleKeys.comments_hide_replies.tr()
+                    : count == 1
+                        ? LocaleKeys.comments_view_reply.tr()
+                        : LocaleKeys.comments_view_replies.tr(
+                            namedArgs: {'count': '$count'},
+                          ),
                 style: context.textTheme.labelMedium?.copyWith(
                   color: AppColors.textSecondary,
                   fontWeight: FontWeight.w600,
@@ -449,9 +463,10 @@ class _Composer extends StatelessWidget {
                           ?.copyWith(color: AppColors.textPrimary),
                       decoration: InputDecoration(
                         isDense: true,
-                        hintText: target == null
-                            ? 'Add a comment...'
-                            : 'Write a reply...',
+                        hintText: (target == null
+                                ? LocaleKeys.comments_add_comment
+                                : LocaleKeys.comments_write_reply)
+                            .tr(),
                         hintStyle: textTheme.bodyMedium
                             ?.copyWith(color: AppColors.textSecondary),
                         counterText: '',
@@ -499,7 +514,7 @@ class _Composer extends StatelessWidget {
                                   AppIcons.send,
                                   size: 20.r,
                                   color: AppColors.white,
-                                  semanticLabel: 'Send',
+                                  semanticLabel: LocaleKeys.comments_send.tr(),
                                 ),
                         ),
                       ),

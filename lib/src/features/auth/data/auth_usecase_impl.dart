@@ -58,13 +58,32 @@ class AuthUsecaseImpl implements AuthUsecase {
     final authUser = await _authUser();
     return switch (authUser) {
       ResourceSuccess<Map<String, dynamic>>(:final data) =>
-        (await _db.getOne(
-          SupabaseTables.profiles,
-          eq: {SupabaseColumns.id: data['id']},
-        )).map(UserModel.fromJson),
+        await getUserById(data['id'] as String),
       ResourceError<Map<String, dynamic>>(:final failure) =>
         Resource<UserModel>.error(failure),
       ResourceLoading<Map<String, dynamic>>() =>
+        const Resource<UserModel>.loading(),
+    };
+  }
+
+  @override
+  Future<Resource<UserModel>> getUserById(String id) async {
+    // Profile row + follow counts in one call (supabase/get_user_by_id.sql).
+    final res = await _db.rpc<Map<String, dynamic>?>(
+      SupabaseRpc.getUserById,
+      params: {'p_id': id},
+    );
+    return switch (res) {
+      ResourceSuccess<Map<String, dynamic>?>(:final data) when data != null =>
+        Resource.success(UserModel.fromJson(data)),
+      // No row: hasProfile() relies on this to send new accounts to setup.
+      ResourceSuccess<Map<String, dynamic>?>() =>
+        const Resource<UserModel>.error(
+          NotFoundFailure('Profile not found.', statusCode: 404),
+        ),
+      ResourceError<Map<String, dynamic>?>(:final failure) =>
+        Resource<UserModel>.error(failure),
+      ResourceLoading<Map<String, dynamic>?>() =>
         const Resource<UserModel>.loading(),
     };
   }

@@ -23,7 +23,7 @@ class DiscoverHelper {
 
   static const String artworkColumns = '*,likes_count:likes(count),'
       'comments_count:comments(count),'
-      'category:categories(id,name,slug),'
+      'category:categories(id,name,slug,cover_url),'
       'images:artwork_images(image_url,thumbnail_url,mime_type,size,position)';
 
   static const String likesTable = 'likes';
@@ -562,12 +562,45 @@ class DiscoverHelper {
         .toList();
   }
 
+  /// Adds each artwork's artist as `profile`, from one `profiles` query for
+  /// all the artists on the page. If it fails the rows come back unchanged, so
+  /// the artworks still show (just without the artist's name and avatar).
+  Future<List<SBRow>> attachProfiles(List<SBRow> rows) async {
+    final ids =
+        rows.map((row) => row['user_id']).whereType<String>().toSet().toList();
+    if (ids.isEmpty) return rows;
+
+    final profiles = await db.get(
+      SupabaseTables.profiles,
+      columns: profileColumns,
+      filter: (query) => query.inFilter('id', ids),
+    );
+    final byId = {
+      for (final p in profiles.dataOrNull ?? const <SBRow>[])
+        p['id'] as String: {
+          ...p,
+          'avatar_url': storage.publicUrl(
+            SupabaseBuckets.avatars,
+            p['avatar_path'] as String?,
+          ),
+        },
+    };
+
+    return [
+      for (final row in rows)
+        if (byId[row['user_id']] case final profile?)
+          {...row, 'profile': profile}
+        else
+          row,
+    ];
+  }
+
   Future<Resource<ArtworkListModel>> buildArtworkList(
     List<SBRow> rows, {
     required bool hasMore,
     String? nextCursor,
   }) async {
-    final result = await attachViewerState(rows);
+    final result = await attachViewerState(await attachProfiles(rows));
 
     return result.map(
       (artworks) => ArtworkListModel.fromJson({

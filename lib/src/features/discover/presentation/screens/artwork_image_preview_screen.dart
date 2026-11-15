@@ -53,12 +53,12 @@ class _ArtworkImagePreviewScreenState extends State<ArtworkImagePreviewScreen> {
         surfaceTintColor: AppColors.transparent,
         centerTitle: true,
         leading: IconButton(
-          tooltip: 'Back',
+          tooltip: LocaleKeys.common_back.tr(),
           icon: const Icon(AppIcons.back),
           onPressed: () => context.pop(),
         ),
         title: Text(
-          'Preview',
+          LocaleKeys.preview_title.tr(),
           style: context.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
@@ -68,7 +68,7 @@ class _ArtworkImagePreviewScreenState extends State<ArtworkImagePreviewScreen> {
           TextButton(
             onPressed: _replace,
             child: Text(
-              'Replace',
+              LocaleKeys.preview_replace.tr(),
               style: context.textTheme.titleSmall?.copyWith(
                 color: AppColors.primary,
                 fontWeight: FontWeight.w600,
@@ -114,12 +114,20 @@ class _ArtworkImagePreviewScreenState extends State<ArtworkImagePreviewScreen> {
                 child: Row(
                   children: [
                     for (final (mode, icon, label) in [
-                      (_PreviewMode.fit, AppIcons.fit, 'Fit'),
-                      (_PreviewMode.fill, AppIcons.fill, 'Fill'),
+                      (
+                        _PreviewMode.fit,
+                        AppIcons.fit,
+                        LocaleKeys.preview_fit.tr(),
+                      ),
+                      (
+                        _PreviewMode.fill,
+                        AppIcons.fill,
+                        LocaleKeys.preview_fill.tr(),
+                      ),
                       (
                         _PreviewMode.original,
                         AppIcons.original,
-                        'Original',
+                        LocaleKeys.preview_original.tr(),
                       ),
                     ])
                       Expanded(
@@ -146,9 +154,9 @@ class _ArtworkImagePreviewScreenState extends State<ArtworkImagePreviewScreen> {
                       borderRadius: AppBorders.md,
                     ),
                   ),
-                  child: const Text(
-                    'Continue',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                  child: Text(
+                    LocaleKeys.preview_continue_button.tr(),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
               ),

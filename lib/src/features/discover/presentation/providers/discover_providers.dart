@@ -4,6 +4,7 @@ import 'package:artora/src/features/auth/presentation/providers/auth_providers.d
 import 'package:artora/src/features/discover/data/discover_usecase.dart';
 import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/state/artwork_provider.dart';
+import 'package:artora/src/features/discover/presentation/providers/follow_providers.dart';
 import 'package:artora/src/services/supabase_storage_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgresChangeEvent;
 import 'package:artora/src/features/discover/model/discover_models.dart';
@@ -180,17 +181,24 @@ final currentArtistProvider =
 // FEED — home feed ("For You" / "Following") and saved
 // ═══════════════════════════════════════════════════════════
 
-/// The API's artwork has no artist, like/comment counts or image size yet, so
-/// those fall back to neutral values until the backend returns them.
+/// The API's artwork has no image size yet, so the aspect ratio falls back to
+/// a neutral value. The artist comes from the embedded `profile`; if that is
+/// missing the artist row stays blank.
 Artwork _toArtwork(ArtworkModel model) {
   final image = model.images.isEmpty ? null : model.images.first;
+  final profile = model.artist;
   return Artwork(
     id: model.id,
     title: model.title,
     imageUrl: image?.thumbnailUrl ?? image?.url ?? '',
     aspectRatio: 1,
-    artist:
-        Artist(id: model.userId, username: '', displayName: '', avatarUrl: ''),
+    artist: Artist(
+      id: model.userId,
+      username: profile?.username ?? '',
+      displayName: profile?.displayName ?? '',
+      avatarUrl: profile?.avatarUrl ?? '',
+      specialties: profile?.specialties ?? const [],
+    ),
     category: model.category?.name ?? '',
     tags: model.tags,
     likes: model.likesCount,
@@ -316,17 +324,9 @@ final filteredExploreProvider =
 });
 
 // ═══════════════════════════════════════════════════════════
-// SHARED — follows, likes and bookmarks, used by feed and explore
+// SHARED — likes and bookmarks, used by feed and explore (follows are in
+// state/follow_provider.dart)
 // ═══════════════════════════════════════════════════════════
-
-final followingProvider =
-    StateNotifierProvider<ToggleSetNotifier, Set<String>>((ref) {
-  final usecase = ref.watch(discoverUsecaseProvider);
-  return ToggleSetNotifier(
-    (id, on) => usecase.setFollowing(id, following: on),
-    load: usecase.getFollowingIds,
-  );
-});
 
 /// Ids in the public feed matching [test], used to seed like / save state.
 Future<Resource<Set<String>>> _feedIds(

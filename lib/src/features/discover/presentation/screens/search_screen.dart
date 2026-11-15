@@ -1,5 +1,6 @@
 import 'package:artora/src/features/discover/model/discover_models.dart';
 import 'package:artora/src/features/discover/presentation/providers/discover_providers.dart';
+import 'package:artora/src/features/discover/presentation/providers/follow_providers.dart';
 import 'package:artora/src/features/discover/presentation/widgets/artwork_masonry.dart';
 import 'package:artora/src/features/discover/presentation/widgets/explore_widgets.dart';
 import 'package:artora/src/features/discover/presentation/widgets/masonry_grid.dart';
@@ -319,6 +320,8 @@ class _ResultsBody extends ConsumerWidget {
                   namedArgs: {'count': formatCompact(artist.followers)},
                 ),
                 isFollowing: following.contains(artist.id),
+                onTap: () =>
+                    context.push(AppRoutes.artistProfilePath(artist.id)),
                 onFollow: () =>
                     ref.read(followingProvider.notifier).toggle(artist.id),
               ),

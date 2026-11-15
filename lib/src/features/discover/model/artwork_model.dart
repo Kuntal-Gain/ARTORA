@@ -357,11 +357,13 @@ class ArtworkCategoryModel extends Equatable {
     required this.id,
     required this.name,
     required this.slug,
+    this.imageUrl = '',
   });
 
   final String id;
   final String name;
   final String slug;
+  final String imageUrl;
 
   factory ArtworkCategoryModel.fromJson(
     Map<String, dynamic> json,
@@ -370,6 +372,7 @@ class ArtworkCategoryModel extends Equatable {
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
       slug: json['slug'] as String? ?? '',
+      imageUrl: json['cover_url'] as String? ?? '',
     );
   }
 
@@ -378,6 +381,7 @@ class ArtworkCategoryModel extends Equatable {
       'id': id,
       'name': name,
       'slug': slug,
+      'cover_url': imageUrl,
     };
   }
 
@@ -385,14 +389,16 @@ class ArtworkCategoryModel extends Equatable {
     String? id,
     String? name,
     String? slug,
+    String? imageUrl,
   }) {
     return ArtworkCategoryModel(
       id: id ?? this.id,
       name: name ?? this.name,
       slug: slug ?? this.slug,
+      imageUrl: imageUrl ?? this.imageUrl,
     );
   }
 
   @override
-  List<Object?> get props => [id, name, slug];
+  List<Object?> get props => [id, name, slug, imageUrl];
 }

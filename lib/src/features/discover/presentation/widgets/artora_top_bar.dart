@@ -94,7 +94,7 @@ class ArtoraWordmark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: 'Artora',
+      label: LocaleKeys.app_name.tr(),
       excludeSemantics: true,
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -109,7 +109,7 @@ class ArtoraWordmark extends StatelessWidget {
           ),
           AppSpacing.hGap(AppSpacing.ms),
           Text(
-            'ARTORA',
+            LocaleKeys.app_name.tr(),
             style: context.textTheme.titleLarge?.copyWith(
               fontFamily: AppFonts.sora,
               fontWeight: FontWeight.w400,

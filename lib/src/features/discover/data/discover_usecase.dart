@@ -2,6 +2,7 @@ import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/model/artwork_req_model.dart';
 import 'package:artora/src/features/discover/model/comment_model.dart';
 import 'package:artora/src/features/discover/model/discover_models.dart';
+import 'package:artora/src/features/discover/model/follow_model.dart';
 import 'package:artora/src/imports/imports.dart';
 
 abstract class DiscoverUsecase {
@@ -43,6 +44,26 @@ abstract class DiscoverUsecase {
   Future<Resource<void>> setFollowing(
     String artistId, {
     required bool following,
+  });
+
+  /// follow [userId] (one-way; they get a Follow Back option); safe to repeat
+  Future<Resource<void>> followUser(String userId);
+
+  /// stop following [userId]; safe to repeat. Their follow of you stays.
+  Future<Resource<void>> unfollowUser(String userId);
+
+  /// people who follow [userId], newest first (needs supabase/follows.sql)
+  Future<Resource<List<FollowUserModel>>> getFollowers(
+    String userId, {
+    int limit = 50,
+    int offset = 0,
+  });
+
+  /// people [userId] follows, newest first (needs supabase/follows.sql)
+  Future<Resource<List<FollowUserModel>>> getFollowings(
+    String userId, {
+    int limit = 50,
+    int offset = 0,
   });
 
   // ═══════════════════════════════════════════════════════════

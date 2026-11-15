@@ -245,36 +245,44 @@ class ArtistCard extends StatelessWidget {
       width: 78.r,
       child: Column(
         children: [
-          Container(
-            padding: EdgeInsets.all(2.r),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: colors.primary, width: 2.r),
-            ),
-            child: AppAvatar(
-              imageUrl: artist.avatarUrl,
-              initials: artist.displayName,
-              radius: 28,
-            ),
-          ),
-          AppSpacing.vGap(AppSpacing.sm),
-          Text(
-            artist.username,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: textTheme.labelMedium?.copyWith(
-              color: colors.onSurface,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            LocaleKeys.discover_followers.tr(
-              namedArgs: {'count': formatCompact(artist.followers)},
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: textTheme.labelSmall?.copyWith(
-              color: colors.onSurfaceVariant,
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => context.push(AppRoutes.artistProfilePath(artist.id)),
+            child: Column(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(2.r),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: colors.primary, width: 2.r),
+                  ),
+                  child: AppAvatar(
+                    imageUrl: artist.avatarUrl,
+                    initials: artist.displayName,
+                    radius: 28,
+                  ),
+                ),
+                AppSpacing.vGap(AppSpacing.sm),
+                Text(
+                  artist.username,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.labelMedium?.copyWith(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  LocaleKeys.discover_followers.tr(
+                    namedArgs: {'count': formatCompact(artist.followers)},
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ),
           ),
           AppSpacing.vGap(AppSpacing.sm),

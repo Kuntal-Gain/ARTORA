@@ -4,6 +4,7 @@ import 'package:artora/src/features/auth/model/user_model.dart';
 import 'package:artora/src/features/auth/presentation/providers/auth_providers.dart';
 import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/state/artwork_provider.dart';
+import 'package:artora/src/features/discover/presentation/providers/follow_providers.dart';
 import 'package:artora/src/imports/imports.dart';
 import 'package:artora/src/services/supabase_storage_service.dart';
 
@@ -14,6 +15,7 @@ import 'package:artora/src/services/supabase_storage_service.dart';
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({
     super.key,
+    this.userId,
     // Space reserved so the last row clears the parent's floating bottom nav.
     this.bottomInset = 110,
     this.showBack = false,
@@ -23,6 +25,9 @@ class ProfileScreen extends ConsumerStatefulWidget {
     this.onEditAvatar,
     this.onArtworkTap,
   });
+
+  /// Whose profile to show; `null` is the signed-in user's own.
+  final String? userId;
 
   final double bottomInset;
 
@@ -50,8 +55,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     super.dispose();
   }
 
-  // Scroll distance over which the app bar collapses (expanded 128 - toolbar 56).
-  static const _collapseRange = 72.0;
+  // Scroll distance over which the app bar collapses (expanded 128 - toolbar 56,
+  // both scaled), so it must be scaled too or the avatar docks off-line.
+  double get _collapseRange => 72.r;
 
   /// Avatar that shrinks and docks into the app bar next to the name.
   Widget _floatingAvatar(BuildContext context) {
@@ -73,14 +79,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               top: top,
               child: _ProfileAvatar(
                 size: size,
-                showBadge: t < 0.3,
+                showBadge: t < 0.3 && !_isOther,
                 image: _avatarImage,
                 onEdit: widget.onEditAvatar,
               ),
             ),
             Positioned(
               left: (widget.showBack ? 66.r : 20.r) + 36.r + 10.r,
-              right: 72.r,
+              right: _isOther ? 20.r : 72.r,
               top: status,
               height: 56.r,
               child: IgnorePointer(
@@ -133,8 +139,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   ImageProvider? get _coverImage =>
       _storageImage(SupabaseBuckets.banners, _user?.coverPath);
 
+  // True when viewing someone else; set in build() like [_user].
+  bool _isOther = false;
+
   Future<void> _refresh() async {
-    final user = await ref.refresh(currentUserProvider.future);
+    final id = widget.userId;
+    final user = id == null
+        ? await ref.refresh(currentUserProvider.future)
+        : await ref.refresh(userProfileProvider(id).future);
     if (user != null) {
       await ref.read(userArtworkFeedProvider(user.id).notifier).refresh();
     }
@@ -163,7 +175,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Specialties',
+                LocaleKeys.profile_specialties.tr(),
                 style: context.textTheme.titleMedium?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
@@ -187,7 +199,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    _user = ref.watch(currentUserProvider).value;
+    final id = widget.userId;
+    _user = (id == null
+            ? ref.watch(currentUserProvider)
+            : ref.watch(userProfileProvider(id)))
+        .value;
+    _isOther = id != null && id != ref.watch(currentUserProvider).value?.id;
     final specialties = _specialties;
     final uid = _user?.id;
     final feed = uid == null
@@ -213,7 +230,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         );
 
     final Widget gallery = _selectedTab == _ProfileTab.collections
-        ? message('No collections yet')
+        ? message(LocaleKeys.profile_no_collections.tr())
         : switch (feed) {
             RequestInitial() || RequestLoading() => SliverToBoxAdapter(
                 child: Padding(
@@ -221,9 +238,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: const Center(child: CircularProgressIndicator()),
                 ),
               ),
-            RequestFailure() => message('Could not load artworks'),
+            RequestFailure() => message(LocaleKeys.profile_load_failed.tr()),
             RequestSuccess() when artworks.isEmpty => message(
-                'No artworks yet',
+                LocaleKeys.profile_no_artworks.tr(),
               ),
             RequestSuccess() => SliverGrid.builder(
                 itemCount: artworks.length,
@@ -244,9 +261,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     variant: index + 2,
                     label: art.title,
                     // Own profile: tapping a tile opens it for editing.
-                    onTap: widget.onArtworkTap == null
-                        ? () => context.push(AppRoutes.editArtworkPath(art.id))
-                        : () => widget.onArtworkTap!(index),
+                    onTap: widget.onArtworkTap != null
+                        ? () => widget.onArtworkTap!(index)
+                        : _isOther
+                            ? () => context.push(
+                                  AppRoutes.artworkDetailPath(art.id),
+                                )
+                            : () =>
+                                context.push(AppRoutes.editArtworkPath(art.id)),
                   );
                 },
               ),
@@ -289,10 +311,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     leading: widget.showBack
                         ? Padding(
                             padding: EdgeInsets.only(left: 18.r),
-                            child: Center(
+                            child: Align(
+                              alignment: Alignment.centerLeft,
                               child: _HeaderAction(
                                 icon: AppIcons.back,
-                                tooltip: 'Back',
+                                tooltip: LocaleKeys.common_back.tr(),
                                 onTap: widget.onBack ??
                                     () => Navigator.of(context).maybePop(),
                               ),
@@ -300,16 +323,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           )
                         : null,
                     actions: [
-                      Padding(
-                        padding: EdgeInsets.only(right: 18.r),
-                        child: Center(
-                          child: _HeaderAction(
-                            icon: AppIcons.more,
-                            tooltip: 'More options',
-                            onTap: widget.onMore,
+                      // The gear opens Settings, which only makes sense on
+                      // your own profile.
+                      if (!_isOther)
+                        Padding(
+                          padding: EdgeInsets.only(right: 18.r),
+                          child: Center(
+                            child: _HeaderAction(
+                              icon: AppIcons.settings,
+                              tooltip: LocaleKeys.settings_title.tr(),
+                              onTap: widget.onMore,
+                            ),
                           ),
                         ),
-                      ),
                     ],
                     flexibleSpace: FlexibleSpaceBar(
                       collapseMode: CollapseMode.pin,
@@ -320,7 +346,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             image: _coverImage,
                             variant: 0,
                             icon: AppIcons.landscape,
-                            label: 'COVER IMAGE',
+                            label: LocaleKeys.profile_cover_image.tr(),
                           ),
                           const DecoratedBox(
                             decoration: BoxDecoration(
@@ -354,6 +380,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         SliverToBoxAdapter(
                           child: _ProfileHeader(
                             onEditProfile: widget.onEditProfile,
+                            other: _isOther
+                                ? _OtherActions(userId: widget.userId!)
+                                : null,
                           ),
                         ),
                         SliverPadding(
@@ -367,6 +396,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               onShowSpecialties: () =>
                                   _showSpecialties(specialties),
                               artworks: artworks.length,
+                              userId: _user?.id,
+                              followers: _user?.totalFollowers ?? 0,
+                              followings: _user?.totalFollowings ?? 0,
                             ),
                           ),
                         ),
@@ -395,6 +427,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ],
                     ),
                   ),
+                  // Short profiles (few artworks) would never scroll far enough
+                  // to collapse the header, so pad the end up to that distance.
+                  SliverLayoutBuilder(
+                    builder: (context, constraints) => SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: (constraints.viewportMainAxisExtent +
+                                _collapseRange -
+                                constraints.precedingScrollExtent)
+                            .clamp(0.0, double.infinity),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -421,9 +465,12 @@ class _ProfileColors {
 
 /// Avatar (overlapping the cover) + Edit Profile button row.
 class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader({this.onEditProfile});
+  const _ProfileHeader({this.onEditProfile, this.other});
 
   final VoidCallback? onEditProfile;
+
+  /// Follow / Message buttons, shown instead of Edit Profile on other profiles.
+  final Widget? other;
 
   @override
   Widget build(BuildContext context) {
@@ -435,7 +482,7 @@ class _ProfileHeader extends StatelessWidget {
           Positioned(
             right: 20.r,
             top: 14.r,
-            child: _EditProfileButton(onTap: onEditProfile),
+            child: other ?? _EditProfileButton(onTap: onEditProfile),
           ),
         ],
       ),
@@ -451,14 +498,20 @@ class _ProfileInfo extends StatelessWidget {
     required this.specialties,
     required this.onShowSpecialties,
     required this.artworks,
+    required this.followers,
+    required this.followings,
+    this.userId,
   });
 
+  final String? userId;
   final String name;
   final String username;
   final String? bio;
   final List<String> specialties;
   final VoidCallback onShowSpecialties;
   final int artworks;
+  final int followers;
+  final int followings;
 
   @override
   Widget build(BuildContext context) {
@@ -515,7 +568,12 @@ class _ProfileInfo extends StatelessWidget {
           ),
         ],
         SizedBox(height: 16.r),
-        _ProfileStats(artworks: artworks),
+        _ProfileStats(
+          artworks: artworks,
+          followers: followers,
+          followings: followings,
+          userId: userId,
+        ),
       ],
     );
   }
@@ -654,7 +712,7 @@ class _EditProfileButton extends StatelessWidget {
         ),
         icon: Icon(AppIcons.edit, size: 16.r),
         label: Text(
-          'Edit Profile',
+          LocaleKeys.profile_edit_profile.tr(),
           maxLines: 1,
           style: context.textTheme.labelMedium?.copyWith(
             color: _ProfileColors.text,
@@ -663,6 +721,74 @@ class _EditProfileButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Follow toggle and Message button for another artist's profile.
+class _OtherActions extends ConsumerWidget {
+  const _OtherActions({required this.userId});
+
+  final String userId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final following = ref.watch(followingProvider).contains(userId);
+    final style = context.textTheme.labelMedium?.copyWith(
+      fontWeight: FontWeight.w700,
+      fontSize: 13.sp,
+    );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: 40.r,
+          child: OutlinedButton(
+            // No messaging backend yet.
+            onPressed: () => showGlobalToast(
+              message: LocaleKeys.profile_messaging_soon.tr(),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _ProfileColors.text,
+              backgroundColor: const Color(0xFF1B1727),
+              side: const BorderSide(color: _ProfileColors.border),
+              padding: EdgeInsets.symmetric(horizontal: 18.r),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+            ),
+            child: Text(LocaleKeys.profile_message.tr(), style: style),
+          ),
+        ),
+        SizedBox(width: 10.r),
+        SizedBox(
+          height: 40.r,
+          child: FilledButton(
+            onPressed: () =>
+                ref.read(followingProvider.notifier).toggle(userId),
+            style: FilledButton.styleFrom(
+              backgroundColor:
+                  following ? const Color(0xFF1B1727) : _ProfileColors.accent,
+              foregroundColor:
+                  following ? _ProfileColors.text : const Color(0xFF160D24),
+              side: following
+                  ? const BorderSide(color: _ProfileColors.border)
+                  : null,
+              padding: EdgeInsets.symmetric(horizontal: 22.r),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+            ),
+            child: Text(
+              (following
+                      ? LocaleKeys.discover_following
+                      : LocaleKeys.discover_follow)
+                  .tr(),
+              style: style,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -701,44 +827,85 @@ class _SpecialtyChip extends StatelessWidget {
 }
 
 class _ProfileStats extends StatelessWidget {
-  // Followers / following are omitted: the backend doesn't expose them yet.
-  const _ProfileStats({required this.artworks});
+  const _ProfileStats({
+    required this.artworks,
+    required this.followers,
+    required this.followings,
+    this.userId,
+  });
 
   final int artworks;
+  final int followers;
+  final int followings;
 
-  @override
-  Widget build(BuildContext context) =>
-      _Stat(value: formatCompact(artworks), label: 'Artworks');
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat({required this.value, required this.label});
-
-  final String value;
-  final String label;
+  /// Whose followers / following the counts open; `null` until loaded.
+  final String? userId;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    final id = userId;
+    return Row(
       children: [
-        Text(
-          value,
-          style: context.textTheme.titleMedium?.copyWith(
-            color: _ProfileColors.text,
-            fontWeight: FontWeight.w800,
-            fontSize: 17.sp,
-            height: 1.2,
-          ),
+        _Stat(
+          value: formatCompact(artworks),
+          label: LocaleKeys.profile_artworks.tr(),
         ),
-        SizedBox(height: 2.r),
-        Text(
-          label,
-          style: context.textTheme.bodySmall?.copyWith(
-            color: _ProfileColors.text.withValues(alpha: 0.8),
-            fontSize: 12.5.sp,
-          ),
+        SizedBox(width: 28.r),
+        _Stat(
+          value: formatCompact(followers),
+          label: LocaleKeys.profile_followers.tr(),
+          onTap: id == null
+              ? null
+              : () => context.push(AppRoutes.artistConnectionsPath(id)),
+        ),
+        SizedBox(width: 28.r),
+        _Stat(
+          value: formatCompact(followings),
+          label: LocaleKeys.discover_following.tr(),
+          onTap: id == null
+              ? null
+              : () => context.push(
+                    AppRoutes.artistConnectionsPath(id, following: true),
+                  ),
         ),
       ],
+    );
+  }
+}
+
+class _Stat extends StatelessWidget {
+  const _Stat({required this.value, required this.label, this.onTap});
+
+  final String value;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8.r),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: context.textTheme.titleMedium?.copyWith(
+              color: _ProfileColors.text,
+              fontWeight: FontWeight.w800,
+              fontSize: 17.sp,
+              height: 1.2,
+            ),
+          ),
+          SizedBox(height: 2.r),
+          Text(
+            label,
+            style: context.textTheme.bodySmall?.copyWith(
+              color: _ProfileColors.text.withValues(alpha: 0.8),
+              fontSize: 12.5.sp,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -767,9 +934,10 @@ class _ProfileTabs extends StatelessWidget {
                       Padding(
                         padding: EdgeInsets.only(top: 6.r, bottom: 10.r),
                         child: Text(
-                          tab == _ProfileTab.artwork
-                              ? 'Artwork'
-                              : 'Collections',
+                          (tab == _ProfileTab.artwork
+                                  ? LocaleKeys.discover_artwork
+                                  : LocaleKeys.profile_collections)
+                              .tr(),
                           style: context.textTheme.bodyMedium?.copyWith(
                             color: selected == tab
                                 ? _ProfileColors.accent
@@ -817,14 +985,13 @@ class _GalleryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(12.r);
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: radius,
+        borderRadius: AppBorders.shapeSm.borderRadius,
         border: Border.all(color: const Color(0x33C99BFF)),
       ),
       child: ClipRRect(
-        borderRadius: radius,
+        borderRadius: AppBorders.shapeSm.borderRadius,
         child: Material(
           color: _ProfileColors.chipSurface,
           child: InkWell(

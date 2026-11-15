@@ -13,6 +13,11 @@ class UserModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  /// Follow counts, read-only: they come back in `stats` but are never written
+  /// (see [toJson]).
+  final int totalFollowers;
+  final int totalFollowings;
+
   const UserModel({
     required this.id,
     this.email,
@@ -26,10 +31,15 @@ class UserModel {
     this.socialLinks = const {},
     this.createdAt,
     this.updatedAt,
+    this.totalFollowers = 0,
+    this.totalFollowings = 0,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    final stats = json['stats'] as Map?;
     return UserModel(
+      totalFollowers: (stats?['total_followers'] as num?)?.toInt() ?? 0,
+      totalFollowings: (stats?['total_followings'] as num?)?.toInt() ?? 0,
       id: json['id'] as String,
       email: json['email'] as String?,
       username: json['username'] as String,
@@ -55,6 +65,8 @@ class UserModel {
     );
   }
 
+  /// The `profiles` row to write. Leaves out [totalFollowers] and
+  /// [totalFollowings]: `stats` isn't a column, so sending it would fail.
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -84,8 +96,12 @@ class UserModel {
     Map<String, dynamic>? socialLinks,
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? totalFollowers,
+    int? totalFollowings,
   }) {
     return UserModel(
+      totalFollowers: totalFollowers ?? this.totalFollowers,
+      totalFollowings: totalFollowings ?? this.totalFollowings,
       id: id,
       email: email ?? this.email,
       username: username ?? this.username,

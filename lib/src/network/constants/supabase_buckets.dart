@@ -5,7 +5,8 @@
 abstract final class SupabaseBuckets {
   SupabaseBuckets._();
 
-  static const String avatars = 'avatars';
+  /// Profile photos live in the `user-profiles` bucket.
+  static const String avatars = 'user-profiles';
   static const String artworks = 'artworks';
   static const String thumbnails = 'thumbnails';
   static const String banners = 'banners';

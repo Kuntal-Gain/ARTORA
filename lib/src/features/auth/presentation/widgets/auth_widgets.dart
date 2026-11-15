@@ -1,4 +1,5 @@
 import 'package:artora/src/imports/imports.dart';
+import 'package:artora/src/shared/widgets/language_picker.dart';
 
 /// Shared page frame: back arrow, heading, subtitle and a scrollable body.
 class AuthScaffold extends StatelessWidget {
@@ -32,28 +33,48 @@ class AuthScaffold extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Fixed top bar: stays in place while the content scrolls.
-                if (showBack)
-                  Padding(
-                    padding: AppSpacing.insetPage.copyWith(top: AppSpacing.sm),
-                    child: Tooltip(
-                      message:
-                          MaterialLocalizations.of(context).backButtonTooltip,
-                      child: InkResponse(
-                        radius: 24,
-                        onTap: () => context.canPop()
-                            ? context.pop()
-                            : context.go(AppRoutes.onboarding),
-                        child: Padding(
-                          padding:
-                              EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                          child: Icon(
-                            AppIcons.back,
-                            color: colors.onSurface,
+                Padding(
+                  padding: AppSpacing.insetPage.copyWith(top: AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      if (showBack)
+                        Tooltip(
+                          message: MaterialLocalizations.of(context)
+                              .backButtonTooltip,
+                          child: InkResponse(
+                            radius: 24,
+                            onTap: () => context.canPop()
+                                ? context.pop()
+                                : context.go(AppRoutes.onboarding),
+                            child: Padding(
+                              padding:
+                                  EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                              child: Icon(
+                                AppIcons.back,
+                                color: colors.onSurface,
+                              ),
+                            ),
+                          ),
+                        ),
+                      const Spacer(),
+                      Tooltip(
+                        message: LocaleKeys.settings_language.tr(),
+                        child: InkResponse(
+                          radius: 24,
+                          onTap: () => showLanguagePicker(context),
+                          child: Padding(
+                            padding:
+                                EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                            child: Icon(
+                              AppIcons.language,
+                              color: colors.onSurface,
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
+                ),
                 Expanded(
                   child: SingleChildScrollView(
                     keyboardDismissBehavior:
@@ -97,17 +118,16 @@ class AuthScaffold extends StatelessWidget {
   }
 }
 
-const String _brandName = 'ARTORA';
-
-/// Colors every occurrence of the brand name inside [text].
+/// Colors every occurrence of the (localized) brand name inside [text].
 TextSpan _brandHighlighted(String text, Color color , BuildContext context) {
-  final parts = text.split(_brandName);
+  final brandName = LocaleKeys.app_name.tr();
+  final parts = text.split(brandName);
   return TextSpan(
     children: [
       for (var i = 0; i < parts.length; i++) ...[
         if (i > 0)
           TextSpan(
-            text: _brandName,
+            text: brandName,
             style: context.textTheme.bodyMedium?.copyWith(
               color: color,
               fontWeight: FontWeight.w800,

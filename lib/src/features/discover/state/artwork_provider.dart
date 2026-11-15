@@ -235,7 +235,8 @@ final updateArtworkProvider = StateNotifierProvider.autoDispose
 
 // ── CATEGORIES ──────────────────────────────────────────────
 
-final artworkCategoriesProvider = StateNotifierProvider.autoDispose<
+// Not autoDispose: categories rarely change, so fetch once and keep in memory.
+final artworkCategoriesProvider = StateNotifierProvider<
     DiscoverFetchNotifier<List<ArtworkCategoryModel>>,
     RequestState<List<ArtworkCategoryModel>>>(
   (ref) => DiscoverFetchNotifier(

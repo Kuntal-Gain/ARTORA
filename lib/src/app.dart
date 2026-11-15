@@ -16,7 +16,7 @@ class App extends StatelessWidget {
 
   Widget _buildMaterialApp(BuildContext context) {
     return MaterialApp.router(
-      title: 'ARTORA',
+      onGenerateTitle: (_) => LocaleKeys.app_name.tr(),
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       routerConfig: appRouter,

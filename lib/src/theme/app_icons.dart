@@ -23,6 +23,7 @@ abstract final class AppIcons {
   static const IconData chevronRight = HugeIconsStroke.arrowRight01;
   static const IconData chevronDown = HugeIconsStroke.arrowDown01;
   static const IconData more = HugeIconsStroke.moreVertical;
+  
 
   // ── Tab bar ──────────────────────────────────────────────
   static const IconData home = HugeIconsStroke.home01;
@@ -36,7 +37,7 @@ abstract final class AppIcons {
   static const IconData remove = HugeIconsStroke.remove01;
   static const IconData close = HugeIconsStroke.cancel01;
   static const IconData clearFilled = HugeIconsSolid.cancelCircle;
-  static const IconData check = HugeIconsStroke.tick02;
+  static const IconData check = HugeIconsSolid.checkmarkCircle01;
   static const IconData edit = HugeIconsStroke.edit02;
   static const IconData send = HugeIconsStroke.sent;
   static const IconData share = HugeIconsStroke.share01;
@@ -96,4 +97,13 @@ abstract final class AppIcons {
   static const IconData cancelFilled = HugeIconsSolid.cancelCircle;
   static const IconData wifiOff = HugeIconsStroke.wifiOff01;
   static const IconData inbox = HugeIconsStroke.inbox;
+
+  // ── Settings ─────────────────────────────────────────────
+  static const IconData userEdit = HugeIconsStroke.userEdit01;
+  static const IconData block = HugeIconsStroke.unavailable;
+  static const IconData appearance = HugeIconsStroke.bulb;
+  static const IconData language = HugeIconsStroke.globe02;
+  static const IconData help = HugeIconsStroke.helpCircle;
+  static const IconData logout = HugeIconsStroke.logout03;
+  static const IconData delete = HugeIconsStroke.delete02;
 }

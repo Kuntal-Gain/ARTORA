@@ -1,131 +1,153 @@
 import '../../../../../imports/imports.dart';
 
-/// Opinionated alert dialog with confirm / cancel actions.
+/// Confirm / cancel dialog: round icon badge, centred title and message, and
+/// an outlined Cancel next to a filled confirm button.
+///
+/// Looks the same on every platform. Set [isDestructive] for delete / sign-out
+/// style actions (red badge and button); otherwise the primary colour is used.
 ///
 /// Usage:
 /// ```dart
 /// final ok = await showAppAlertDialog(
 ///   context,
-///   title: 'Discard changes?',
-///   message: 'You will lose unsaved edits.',
-///   confirmLabel: 'Discard',
+///   icon: AppIcons.delete,
+///   title: 'Delete Artwork?',
+///   message: 'This artwork will be permanently deleted.',
+///   confirmLabel: 'Delete',
 ///   isDestructive: true,
 /// );
+/// if (ok == true) { ... }
 /// ```
+/// For the common cases see [AppDialogPresets].
 class AppAlertDialog extends StatelessWidget {
   const AppAlertDialog({
     super.key,
     required this.title,
     this.message,
+    this.icon,
     this.confirmLabel = 'OK',
     this.cancelLabel = 'Cancel',
     this.isDestructive = false,
-    this.platform,
   });
 
   final String title;
   final String? message;
+
+  /// Shown in a round badge above the title; omit for no badge.
+  final IconData? icon;
   final String confirmLabel;
   final String cancelLabel;
   final bool isDestructive;
-  final AppPlatformStyle? platform;
 
   @override
   Widget build(BuildContext context) {
-    final useCupertino = platform != null
-        ? platform == AppPlatformStyle.cupertino
-        : context.isCupertinoUi;
-    final colors = context.colors;
-    final confirmColor = isDestructive ? colors.error : colors.primary;
+    final accent = isDestructive ? AppColors.google : AppColors.primary;
+    final textTheme = context.textTheme;
 
-    if (useCupertino) {
-      return CupertinoAlertDialog(
-        title: Text(title),
-        content: message == null
-            ? null
-            : Padding(
-                padding: EdgeInsets.only(top: AppSpacing.sm),
-                child: Text(message!),
-              ),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(cancelLabel),
-          ),
-          CupertinoDialogAction(
-            isDestructiveAction: isDestructive,
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(
-              confirmLabel,
-              style: TextStyle(color: confirmColor),
-            ),
-          ),
-        ],
-      );
-    }
-
-    return AlertDialog(
-      backgroundColor: colors.surfaceContainerHigh,
-      shape: const RoundedRectangleBorder(borderRadius: AppBorders.dialog),
-      title: Text(
-        title,
-        style: context.textTheme.titleLarge?.copyWith(color: colors.onSurface),
+    return Dialog(
+      backgroundColor: AppColors.elevated,
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.pagePadding,
+        vertical: AppSpacing.lg,
       ),
-      content: message == null
-          ? null
-          : Text(
-              message!,
-              style: context.textTheme.bodyMedium?.copyWith(
-                color: colors.onSurfaceVariant,
+      shape: const RoundedRectangleBorder(
+        borderRadius: AppBorders.dialog,
+        side: BorderSide(color: AppColors.border),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Container(
+                  width: 56.r,
+                  height: 56.r,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: accent.withValues(alpha: 0.14),
+                    border: Border.all(color: accent.withValues(alpha: 0.35)),
+                  ),
+                  child: Icon(icon, color: accent, size: 26.r),
+                ),
+                AppSpacing.vGap(AppSpacing.md),
+              ],
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: textTheme.titleMedium?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text(cancelLabel),
+              if (message != null) ...[
+                AppSpacing.vGap(AppSpacing.sm),
+                Text(
+                  message!,
+                  textAlign: TextAlign.center,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+              AppSpacing.vGap(AppSpacing.lg),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppButton(
+                      label: cancelLabel,
+                      variant: ButtonVariant.outline,
+                      textColor: AppColors.textPrimary,
+                      isFullWidth: true,
+                      onPressed: () => Navigator.of(context).pop(false),
+                    ),
+                  ),
+                  AppSpacing.hGap(AppSpacing.ms),
+                  Expanded(
+                    child: AppButton(
+                      label: confirmLabel,
+                      color: accent,
+                      textColor: AppColors.white,
+                      isFullWidth: true,
+                      onPressed: () => Navigator.of(context).pop(true),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          style: TextButton.styleFrom(foregroundColor: confirmColor),
-          child: Text(confirmLabel),
-        ),
-      ],
+      ),
     );
   }
 }
 
-/// Presents [AppAlertDialog] and returns `true` if confirmed.
+/// Presents [AppAlertDialog]; completes with `true` if confirmed, `false` if
+/// cancelled and `null` if dismissed by tapping outside.
 Future<bool?> showAppAlertDialog(
   BuildContext context, {
   required String title,
   String? message,
+  IconData? icon,
   String confirmLabel = 'OK',
   String cancelLabel = 'Cancel',
   bool isDestructive = false,
-  AppPlatformStyle? platform,
+  bool barrierDismissible = true,
 }) {
-  final useCupertino = platform != null
-      ? platform == AppPlatformStyle.cupertino
-      : context.isCupertinoUi;
-
-  final dialog = AppAlertDialog(
-    title: title,
-    message: message,
-    confirmLabel: confirmLabel,
-    cancelLabel: cancelLabel,
-    isDestructive: isDestructive,
-    platform: platform,
-  );
-
-  if (useCupertino) {
-    return showCupertinoDialog<bool>(
-      context: context,
-      builder: (_) => dialog,
-    );
-  }
-
   return showDialog<bool>(
     context: context,
-    builder: (_) => dialog,
+    barrierDismissible: barrierDismissible,
+    builder: (_) => AppAlertDialog(
+      title: title,
+      message: message,
+      icon: icon,
+      confirmLabel: confirmLabel,
+      cancelLabel: cancelLabel,
+      isDestructive: isDestructive,
+    ),
   );
 }

@@ -15,6 +15,7 @@ abstract final class AppRoutes {
   static const String explore = '/explore';
   static const String saved = '/saved';
   static const String profile = '/profile';
+  static const String settings = '/settings';
 
   /// Create an artwork.
   static const String createArtwork = '/artwork/new';
@@ -30,6 +31,15 @@ abstract final class AppRoutes {
   /// Full comments page for an artwork.
   static const String artworkComments = '/artwork/:id/comments';
   static String artworkCommentsPath(String id) => '/artwork/$id/comments';
+
+  /// Another artist's profile; use [artistProfilePath] to build the location.
+  static const String artistProfile = '/artist/:id';
+  static String artistProfilePath(String id) => '/artist/$id';
+
+  /// Followers & Following of an artist; `tab` is `followers` or `following`.
+  static const String artistConnections = '/artist/:id/connections';
+  static String artistConnectionsPath(String id, {bool following = false}) =>
+      '/artist/$id/connections?tab=${following ? 'following' : 'followers'}';
 
   /// Image preview; pass the picked `File` as `extra`, pops with the result.
   static const String artworkPreview = '/artwork/preview';

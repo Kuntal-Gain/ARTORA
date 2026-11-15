@@ -1,8 +1,9 @@
-import 'package:artora/src/features/discover/model/artwork_model.dart';
+﻿import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/model/discover_models.dart';
 import 'package:artora/src/features/discover/presentation/providers/discover_providers.dart';
 import 'package:artora/src/features/discover/presentation/widgets/comments_section.dart';
 import 'package:artora/src/features/discover/state/artwork_provider.dart';
+import 'package:artora/src/features/discover/presentation/providers/follow_providers.dart';
 import 'package:artora/src/features/discover/state/comments_provider.dart';
 import 'package:artora/src/imports/imports.dart';
 
@@ -29,7 +30,7 @@ class _ArtworkDetailScreenState extends ConsumerState<ArtworkDetailScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: switch (post) {
-        RequestInitial() || RequestLoading() => const AppLoading(),
+        RequestInitial() || RequestLoading() => _loadingBody(context, id),
         RequestFailure(:final failure) => SafeArea(
             child: AppErrorWidget(
               message: failure.message,
@@ -39,6 +40,113 @@ class _ArtworkDetailScreenState extends ConsumerState<ArtworkDetailScreen> {
           ),
         RequestSuccess(:final data) => _body(context, data),
       },
+    );
+  }
+
+  /// Shown while the artwork loads: the loading image area, a skeleton artist
+  /// row and the action row. Counts come from the feed card when it's there.
+  Widget _loadingBody(BuildContext context, String id) {
+    final feed = switch (ref.watch(feedProvider)) {
+      RequestSuccess(:final data) => data,
+      _ => const <Artwork>[],
+    };
+    final card = feed.where((a) => a.id == id).firstOrNull;
+    final liked = ref.watch(likedProvider).contains(id);
+    final saved = ref.watch(bookmarkedProvider).contains(id);
+
+    Widget bar(double width, double height, {bool pill = false}) => Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: AppColors.shimmer,
+            borderRadius: pill ? AppBorders.full : AppBorders.sm,
+          ),
+        );
+
+    return Column(
+      children: [
+        Expanded(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const AppArtworkLoading(),
+              Positioned(
+                top: MediaQuery.paddingOf(context).top,
+                left: AppSpacing.xs,
+                child: IconButton(
+                  tooltip: LocaleKeys.common_back.tr(),
+                  onPressed: () => context.pop(),
+                  icon: const _OverlayIcon(AppIcons.back),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.pagePadding,
+            AppSpacing.md,
+            AppSpacing.pagePadding,
+            MediaQuery.paddingOf(context).bottom + AppSpacing.md,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 44.r,
+                    height: 44.r,
+                    decoration: const BoxDecoration(
+                      color: AppColors.shimmer,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  AppSpacing.hGap(AppSpacing.ms),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      bar(96.w, 12.h),
+                      AppSpacing.vGap(AppSpacing.sm),
+                      bar(64.w, 10.h),
+                    ],
+                  ),
+                  const Spacer(),
+                  bar(88.w, 36.h, pill: true),
+                ],
+              ),
+              AppSpacing.vGap(AppSpacing.md),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _Action(
+                    icon: liked ? AppIcons.likeFilled : AppIcons.like,
+                    color: liked ? AppColors.primary : null,
+                    label: formatCompact(card?.likes ?? 0),
+                    onTap: () {},
+                  ),
+                  _Action(
+                    icon: AppIcons.comment,
+                    label: formatCompact(card?.comments ?? 0),
+                    onTap: () {},
+                  ),
+                  _Action(
+                    icon: AppIcons.share,
+                    label: LocaleKeys.common_share.tr(),
+                    onTap: () {},
+                  ),
+                  _Action(
+                    icon: saved ? AppIcons.bookmarkFilled : AppIcons.bookmark,
+                    color: saved ? AppColors.primary : null,
+                    label: LocaleKeys.discover_save.tr(),
+                    onTap: () {},
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -77,220 +185,269 @@ class _ArtworkDetailScreenState extends ConsumerState<ArtworkDetailScreen> {
         artist != null && ref.watch(followingProvider).contains(artist.id);
     final isOwner = AppConfig.supabase.auth.currentUser?.id == art.userId;
 
-    final imageHeight = MediaQuery.sizeOf(context).width / 0.8;
+    final width = MediaQuery.sizeOf(context).width;
+    final imageHeight = width / 0.8;
+    // The image crops down to this height on scroll, then stays pinned while
+    // the details scroll underneath it.
+    final pinnedHeight = width * 0.6;
+    // Rounded top edge of the details, overlapping the image's bottom.
     final overlap = AppSpacing.lg;
 
-    return ListView(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.md,
-      ),
-      children: [
-        Stack(
-          children: [
-            SizedBox(
-              height: imageHeight,
-              child: PageView(
+    return CustomScrollView(
+      slivers: [
+        SliverAppBar(
+          pinned: true,
+          automaticallyImplyLeading: false,
+          backgroundColor: AppColors.background,
+          surfaceTintColor: AppColors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          expandedHeight: imageHeight,
+          collapsedHeight: pinnedHeight,
+          // Back and more live in the toolbar, so they stay put while scrolling.
+          leading: IconButton(
+            tooltip: LocaleKeys.common_back.tr(),
+            onPressed: () => context.pop(),
+            icon: const _OverlayIcon(AppIcons.back),
+          ),
+          actions: [
+            PopupMenuButton<VoidCallback>(
+              icon: const _OverlayIcon(AppIcons.more),
+              color: AppColors.elevated,
+              onSelected: (action) => action(),
+              itemBuilder: (context) => [
+                if (isOwner)
+                  PopupMenuItem(
+                    value: () => context.push(AppRoutes.editArtworkPath(id)),
+                    child: Text(LocaleKeys.common_edit.tr()),
+                  ),
+                PopupMenuItem(
+                  value: () => ShareService.instance.shareText(art.title),
+                  child: Text(LocaleKeys.common_share.tr()),
+                ),
+              ],
+            ),
+            AppSpacing.hGap(AppSpacing.xs),
+          ],
+          // Fills the bar, so the pager is cropped (not scrolled) as it shrinks.
+          flexibleSpace: Stack(
+            fit: StackFit.expand,
+            children: [
+              PageView(
                 onPageChanged: (i) => setState(() => _page = i),
                 children: [
                   for (final image in art.images)
-                    CommonImage(imageUrl: image.url, fit: BoxFit.cover),
+                    CommonImage(
+                      imageUrl: image.url,
+                      fit: BoxFit.cover,
+                      placeholder: const AppArtworkLoading(),
+                    ),
                 ],
               ),
-            ),
-            Positioned(
-              top: MediaQuery.paddingOf(context).top,
-              left: AppSpacing.xs,
-              right: AppSpacing.xs,
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: 'Back',
-                    onPressed: () => context.pop(),
-                    icon: const Icon(
-                      AppIcons.back,
-                      color: AppColors.white,
-                    ),
-                  ),
-                  const Spacer(),
-                  PopupMenuButton<VoidCallback>(
-                    icon: const Icon(
-                      AppIcons.more,
-                      color: AppColors.white,
-                    ),
-                    color: AppColors.elevated,
-                    onSelected: (action) => action(),
-                    itemBuilder: (context) => [
-                      if (isOwner)
-                        PopupMenuItem(
-                          value: () =>
-                              context.push(AppRoutes.editArtworkPath(id)),
-                          child: const Text('Edit'),
-                        ),
-                      PopupMenuItem(
-                        value: () =>
-                            ShareService.instance.shareText(art.title),
-                        child: const Text('Share'),
+              // Artist stacked on the bottom of the image, over a dark fade.
+              if (artist != null && artist.username.isNotEmpty)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [AppColors.transparent, AppColors.scrim],
                       ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            if (art.images.length > 1)
-              Positioned(
-                right: AppSpacing.md,
-                bottom: overlap + AppSpacing.sm,
-                child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    color: AppColors.scrim,
-                    borderRadius: AppBorders.full,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: AppSpacing.xs,
                     ),
-                    child: Text(
-                      '${_page + 1}/${art.images.length}',
-                      style: textTheme.labelMedium
-                          ?.copyWith(color: AppColors.white),
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        AppSpacing.pagePadding,
+                        AppSpacing.xl,
+                        AppSpacing.pagePadding,
+                        overlap + AppSpacing.sm,
+                      ),
+                      child: _ArtistRow(
+                        artist: artist,
+                        following: following,
+                        onFollow: () => ref
+                            .read(followingProvider.notifier)
+                            .toggle(artist.id),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            // Details panel overlapping the image's bottom edge.
-            Padding(
-              padding: EdgeInsets.only(top: imageHeight - overlap),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.vertical(
-                    top: AppBorders.xl.topLeft,
-                  ),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.pagePadding,
-                    AppSpacing.lg,
-                    AppSpacing.pagePadding,
-                    0,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (artist != null && artist.username.isNotEmpty) ...[
-                        _ArtistRow(
-                          artist: artist,
-                          following: following,
-                          onFollow: () => ref
-                              .read(followingProvider.notifier)
-                              .toggle(artist.id),
+              // Top centre, so it doesn't collide with the artist row.
+              if (art.images.length > 1)
+                Positioned(
+                  top: MediaQuery.paddingOf(context).top + AppSpacing.md,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: DecoratedBox(
+                      decoration: const BoxDecoration(
+                        color: AppColors.scrim,
+                        borderRadius: AppBorders.full,
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.xs,
                         ),
-                        AppSpacing.vGap(AppSpacing.md),
-                      ],
-                      Text(
-                        art.title,
-                        style: textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                        child: Text(
+                          '${_page + 1}/${art.images.length}',
+                          style: textTheme.labelMedium
+                              ?.copyWith(color: AppColors.white),
                         ),
                       ),
-                      if (art.description?.isNotEmpty ?? false) ...[
-                        AppSpacing.vGap(AppSpacing.xs),
-                        Text(
-                          art.description!,
-                          style: textTheme.bodyMedium
-                              ?.copyWith(color: AppColors.textSecondary),
-                        ),
-                      ],
-                      if (art.tags.isNotEmpty) ...[
-                        AppSpacing.vGap(AppSpacing.md),
-                        Wrap(
-                          spacing: AppSpacing.sm,
-                          runSpacing: AppSpacing.sm,
-                          children: [
-                            for (final tag in art.tags)
-                              _TagPill(
-                                tag: tag,
-                                onTap: () => context
-                                    .push('${AppRoutes.search}?q=$tag'),
-                              ),
-                          ],
-                        ),
-                      ],
-                      AppSpacing.vGap(AppSpacing.md),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _Action(
-                            icon: liked
-                                ? AppIcons.likeFilled
-                                : AppIcons.like,
-                            color: liked ? AppColors.error : null,
-                            label: formatCompact(likes),
-                            onTap: () => toggleLikeOptimistic(ref, id),
-                          ),
-                          _Action(
-                            icon: AppIcons.comment,
-                            label: formatCompact(comments),
-                            onTap: () => context
-                                .push(AppRoutes.artworkCommentsPath(id)),
-                          ),
-                          _Action(
-                            icon: AppIcons.share,
-                            label: 'Share',
-                            onTap: () =>
-                                ShareService.instance.shareText(art.title),
-                          ),
-                          _Action(
-                            icon: saved
-                                ? AppIcons.bookmarkFilled
-                                : AppIcons.bookmark,
-                            color: saved ? AppColors.primary : null,
-                            label: LocaleKeys.discover_save.tr(),
-                            onTap: () => ref
-                                .read(bookmarkedProvider.notifier)
-                                .toggle(id),
-                          ),
-                        ],
-                      ),
-                      AppSpacing.vGap(AppSpacing.sm),
-                      const Divider(color: AppColors.divider, height: 1),
-                      AppSpacing.vGap(AppSpacing.md),
-                      CommentsPreview(artworkId: id, ownerId: art.userId),
-                      if (related.isNotEmpty) ...[
-                        AppSpacing.vGap(AppSpacing.lg),
-                        _SectionHeader(
-                          title: 'Related Artwork',
-                          onSeeAll: () => context.go(AppRoutes.explore),
-                        ),
-                        AppSpacing.vGap(AppSpacing.sm),
-                      ],
-                    ],
+                    ),
                   ),
                 ),
+            ],
+          ),
+          bottom: PreferredSize(
+            preferredSize: Size.fromHeight(overlap),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.vertical(
+                  top: AppBorders.xl.topLeft,
+                ),
               ),
+              child: SizedBox(height: overlap, width: double.infinity),
             ),
-          ],
+          ),
         ),
-        if (related.isNotEmpty)
-          SizedBox(
-            height: 170.h,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.pagePadding,
-              ),
-              itemCount: related.length,
-              separatorBuilder: (_, __) => AppSpacing.hGap(AppSpacing.sm),
-              itemBuilder: (context, i) => _RelatedTile(
-                artwork: related[i],
-                onTap: () => context
-                    .push(AppRoutes.artworkDetailPath(related[i].id)),
+        SliverToBoxAdapter(
+          child: ColoredBox(
+            color: AppColors.background,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.pagePadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    art.title,
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  if (art.description?.isNotEmpty ?? false) ...[
+                    AppSpacing.vGap(AppSpacing.xs),
+                    Text(
+                      art.description!,
+                      style: textTheme.bodyMedium
+                          ?.copyWith(color: AppColors.textSecondary),
+                    ),
+                  ],
+                  if (art.tags.isNotEmpty) ...[
+                    AppSpacing.vGap(AppSpacing.md),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: [
+                        for (final tag in art.tags)
+                          _TagPill(
+                            tag: tag,
+                            onTap: () =>
+                                context.push('${AppRoutes.search}?q=$tag'),
+                          ),
+                      ],
+                    ),
+                  ],
+                  AppSpacing.vGap(AppSpacing.md),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _Action(
+                        icon: liked ? AppIcons.likeFilled : AppIcons.like,
+                        color: liked ? AppColors.error : null,
+                        label: formatCompact(likes),
+                        onTap: () => toggleLikeOptimistic(ref, id),
+                      ),
+                      _Action(
+                        icon: AppIcons.comment,
+                        label: formatCompact(comments),
+                        onTap: () =>
+                            context.push(AppRoutes.artworkCommentsPath(id)),
+                      ),
+                      _Action(
+                        icon: AppIcons.share,
+                        label: LocaleKeys.common_share.tr(),
+                        onTap: () => ShareService.instance.shareText(art.title),
+                      ),
+                      _Action(
+                        icon:
+                            saved ? AppIcons.bookmarkFilled : AppIcons.bookmark,
+                        color: saved ? AppColors.primary : null,
+                        label: LocaleKeys.discover_save.tr(),
+                        onTap: () =>
+                            ref.read(bookmarkedProvider.notifier).toggle(id),
+                      ),
+                    ],
+                  ),
+                  AppSpacing.vGap(AppSpacing.sm),
+                  const Divider(color: AppColors.divider, height: 1),
+                  AppSpacing.vGap(AppSpacing.md),
+                  CommentsPreview(artworkId: id, ownerId: art.userId),
+                  if (related.isNotEmpty) ...[
+                    AppSpacing.vGap(AppSpacing.lg),
+                    _SectionHeader(
+                      title: LocaleKeys.artwork_related.tr(),
+                      onSeeAll: () => context.go(AppRoutes.explore),
+                    ),
+                    AppSpacing.vGap(AppSpacing.sm),
+                  ],
+                ],
               ),
             ),
           ),
+        ),
+        if (related.isNotEmpty)
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 170.h,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.pagePadding,
+                ),
+                itemCount: related.length,
+                separatorBuilder: (_, __) => AppSpacing.hGap(AppSpacing.sm),
+                itemBuilder: (context, i) => _RelatedTile(
+                  artwork: related[i],
+                  onTap: () =>
+                      context.push(AppRoutes.artworkDetailPath(related[i].id)),
+                ),
+              ),
+            ),
+          ),
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: MediaQuery.paddingOf(context).bottom + AppSpacing.md,
+          ),
+        ),
       ],
+    );
+  }
+}
+
+/// White icon on a dark circle, so the buttons stay readable over any image.
+class _OverlayIcon extends StatelessWidget {
+  const _OverlayIcon(this.icon);
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: AppColors.scrim,
+        shape: BoxShape.circle,
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(AppSpacing.sm),
+        child: Icon(icon, color: AppColors.white, size: 20.r),
+      ),
     );
   }
 }
@@ -311,33 +468,44 @@ class _ArtistRow extends StatelessWidget {
     final textTheme = context.textTheme;
     return Row(
       children: [
-        AppAvatar(
-          imageUrl: artist.avatarUrl,
-          initials: artist.displayName,
-          radius: 22,
-        ),
-        AppSpacing.hGap(AppSpacing.ms),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                artist.username,
-                style: textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => context.push(AppRoutes.artistProfilePath(artist.id)),
+            child: Row(
+              children: [
+                AppAvatar(
+                  imageUrl: artist.avatarUrl,
+                  initials: artist.displayName,
+                  radius: 22,
                 ),
-              ),
-              Text(
-                LocaleKeys.discover_followers.tr(
-                  namedArgs: {'count': formatCompact(artist.followers)},
+                AppSpacing.hGap(AppSpacing.ms),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        artist.username,
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        LocaleKeys.discover_followers.tr(
+                          namedArgs: {'count': formatCompact(artist.followers)},
+                        ),
+                        style: textTheme.bodySmall
+                            ?.copyWith(color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
                 ),
-                style: textTheme.bodySmall
-                    ?.copyWith(color: AppColors.textSecondary),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
+        AppSpacing.hGap(AppSpacing.ms),
         Material(
           color: following
               ? AppColors.transparent

@@ -76,6 +76,19 @@ class ForgotPasswordNotifier extends StateNotifier<RequestState<void>> {
   }
 }
 
+class SignOutNotifier extends StateNotifier<RequestState<void>> {
+  SignOutNotifier(this._usecase) : super(const RequestInitial());
+
+  final AuthUsecase _usecase;
+
+  Future<void> submit() async {
+    state = const RequestLoading();
+    final result = await _usecase.signOut();
+    if (!mounted) return;
+    state = result.toRequestState();
+  }
+}
+
 class ProfileSetupNotifier extends StateNotifier<RequestState<void>> {
   ProfileSetupNotifier(this._usecase) : super(const RequestInitial());
 
@@ -179,6 +192,18 @@ final usernameAvailabilityProvider = StateNotifierProvider.autoDispose<
 /// The signed-in user's profile row (`null` when it can't be loaded).
 final currentUserProvider = FutureProvider.autoDispose<UserModel?>((ref) async {
   final result = await ref.watch(authUsecaseProvider).getUser();
+  return result.dataOrNull;
+});
+
+final signOutProvider =
+    StateNotifierProvider.autoDispose<SignOutNotifier, RequestState<void>>(
+  (ref) => SignOutNotifier(ref.watch(authUsecaseProvider)),
+);
+
+/// Another artist's profile row, by user id.
+final userProfileProvider =
+    FutureProvider.autoDispose.family<UserModel?, String>((ref, id) async {
+  final result = await ref.watch(authUsecaseProvider).getUserById(id);
   return result.dataOrNull;
 });
 

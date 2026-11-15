@@ -6,33 +6,33 @@ abstract final class AppEmptyPresets {
 
   static Widget noArtwork({VoidCallback? onCreate}) => AppEmptyState(
         icon: AppIcons.palette,
-        title: 'No Artwork Yet',
-        subtitle: 'Share your first artwork with the community.',
-        actionLabel: 'Create Artwork',
+        title: LocaleKeys.states_no_artwork_title.tr(),
+        subtitle: LocaleKeys.states_no_artwork_subtitle.tr(),
+        actionLabel: LocaleKeys.states_create_artwork.tr(),
         onAction: onCreate,
       );
 
   static Widget noSaved({VoidCallback? onExplore}) => AppEmptyState(
         icon: AppIcons.bookmark,
-        title: 'No Saved Artwork',
-        subtitle: 'Save artwork you love and get back to it anytime.',
-        actionLabel: 'Explore',
+        title: LocaleKeys.states_no_saved_title.tr(),
+        subtitle: LocaleKeys.states_no_saved_subtitle.tr(),
+        actionLabel: LocaleKeys.states_explore.tr(),
         onAction: onExplore,
       );
 
   static Widget noComments({VoidCallback? onComment}) => AppEmptyState(
         icon: AppIcons.comment,
-        title: 'No Comments Yet',
-        subtitle: 'Be the first to share your thoughts.',
-        actionLabel: 'Comment',
+        title: LocaleKeys.states_no_comments_title.tr(),
+        subtitle: LocaleKeys.states_no_comments_subtitle.tr(),
+        actionLabel: LocaleKeys.states_comment.tr(),
         onAction: onComment,
       );
 
   static Widget noResults({VoidCallback? onExplore}) => AppEmptyState(
         icon: AppIcons.searchOff,
-        title: 'No Results Found',
-        subtitle: 'Try a different search term or explore categories.',
-        actionLabel: 'Explore',
+        title: LocaleKeys.states_no_results_title.tr(),
+        subtitle: LocaleKeys.states_no_results_subtitle.tr(),
+        actionLabel: LocaleKeys.states_explore.tr(),
         onAction: onExplore,
       );
 }
@@ -43,24 +43,24 @@ abstract final class AppErrorPresets {
 
   static Widget network({VoidCallback? onRetry}) => AppErrorWidget(
         icon: AppIcons.wifiOff,
-        title: 'Network Error',
-        message: 'Something went wrong. Please check your connection.',
+        title: LocaleKeys.states_network_error_title.tr(),
+        message: LocaleKeys.states_network_error_message.tr(),
         onRetry: onRetry,
       );
 
   static Widget upload({VoidCallback? onRetry}) => AppErrorWidget(
         icon: AppIcons.cloudUpload,
-        title: 'Upload Error',
-        message: 'Failed to upload artwork. Please try again.',
-        retryLabel: 'Retry',
+        title: LocaleKeys.states_upload_error_title.tr(),
+        message: LocaleKeys.states_upload_error_message.tr(),
+        retryLabel: LocaleKeys.states_retry.tr(),
         onRetry: onRetry,
       );
 
   static Widget permission({VoidCallback? onBack}) => AppErrorWidget(
         icon: AppIcons.lock,
-        title: 'Permission Error',
-        message: "You don't have permission to perform this action.",
-        retryLabel: 'Go Back',
+        title: LocaleKeys.states_permission_error_title.tr(),
+        message: LocaleKeys.states_permission_error_message.tr(),
+        retryLabel: LocaleKeys.states_go_back.tr(),
         onRetry: onBack,
       );
 }

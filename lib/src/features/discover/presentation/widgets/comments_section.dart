@@ -2,7 +2,7 @@ import 'package:artora/src/features/discover/model/comment_model.dart';
 import 'package:artora/src/features/discover/state/comments_provider.dart';
 import 'package:artora/src/imports/imports.dart';
 
-/// Post-screen preview: "Comments (n)" + See All and the first comment.
+/// Post-screen preview: "Comments (n)" + See All and the first few comments.
 /// Everything else lives on the full comments screen.
 class CommentsPreview extends ConsumerWidget {
   const CommentsPreview({
@@ -14,6 +14,9 @@ class CommentsPreview extends ConsumerWidget {
   final String artworkId;
   final String ownerId;
 
+  /// How many comments to show before "See All".
+  static const _previewCount = 7;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(commentsProvider(artworkId));
@@ -21,9 +24,12 @@ class CommentsPreview extends ConsumerWidget {
     final me = AppConfig.supabase.auth.currentUser?.id;
     void open() => context.push(AppRoutes.artworkCommentsPath(artworkId));
 
-    final (total, first) = switch (state) {
-      RequestSuccess(:final data) => (data.total, data.comments.firstOrNull),
-      _ => (0, null),
+    final (total, shown) = switch (state) {
+      RequestSuccess(:final data) => (
+          data.total,
+          data.comments.take(_previewCount).toList(),
+        ),
+      _ => (0, const <CommentModel>[]),
     };
 
     return Column(
@@ -53,18 +59,19 @@ class CommentsPreview extends ConsumerWidget {
           ],
         ),
         AppSpacing.vGap(AppSpacing.sm),
-        if (first != null)
-          CommentTile(
-            comment: first,
-            canDelete: me == first.userId || me == ownerId,
-            onLike: () => ref
-                .read(commentsProvider(artworkId).notifier)
-                .toggleLike(first.id),
-            onReply: open,
-            onDelete: () => ref
-                .read(commentsProvider(artworkId).notifier)
-                .delete(first.id),
-          )
+        if (shown.isNotEmpty)
+          for (final comment in shown)
+            CommentTile(
+              comment: comment,
+              canDelete: me == comment.userId || me == ownerId,
+              onLike: () => ref
+                  .read(commentsProvider(artworkId).notifier)
+                  .toggleLike(comment.id),
+              onReply: open,
+              onDelete: () => ref
+                  .read(commentsProvider(artworkId).notifier)
+                  .delete(comment.id),
+            )
         else
           InkWell(
             onTap: open,
@@ -72,7 +79,7 @@ class CommentsPreview extends ConsumerWidget {
               padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Text(
                 state is RequestSuccess
-                    ? 'No comments yet. Be the first to share your thoughts!'
+                    ? LocaleKeys.comments_empty.tr()
                     : '',
                 style: textTheme.bodyMedium
                     ?.copyWith(color: AppColors.textSecondary),
@@ -107,22 +114,23 @@ class CommentTile extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.elevated,
-        title: const Text('Delete comment?'),
+        title: Text(LocaleKeys.comments_delete_title.tr()),
         content: Text(
-          comment.isReply
-              ? 'This reply will be removed.'
-              : 'This comment and its replies will be removed.',
+          (comment.isReply
+                  ? LocaleKeys.comments_delete_reply_message
+                  : LocaleKeys.comments_delete_comment_message)
+              .tr(),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(LocaleKeys.common_cancel.tr()),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: AppColors.error),
+            child: Text(
+              LocaleKeys.common_delete.tr(),
+              style: const TextStyle(color: AppColors.error),
             ),
           ),
         ],
@@ -158,7 +166,7 @@ class CommentTile extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        author?.username ?? 'Unknown',
+                        author?.username ?? LocaleKeys.comments_unknown.tr(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.titleSmall?.copyWith(
@@ -219,7 +227,7 @@ class CommentTile extends StatelessWidget {
                             vertical: AppSpacing.xs,
                           ),
                           child: Text(
-                            'Reply',
+                            LocaleKeys.comments_reply.tr(),
                             style: textTheme.bodySmall?.copyWith(
                               color: AppColors.textSecondary,
                               fontWeight: FontWeight.w600,
@@ -246,14 +254,14 @@ class CommentTile extends StatelessWidget {
                           PopupMenuItem(
                             value: () =>
                                 CopyService.instance.copy(comment.content),
-                            child: const Text('Copy text'),
+                            child: Text(LocaleKeys.comments_copy_text.tr()),
                           ),
                           if (canDelete)
                             PopupMenuItem(
                               value: () => _confirmDelete(context),
-                              child: const Text(
-                                'Delete',
-                                style: TextStyle(color: AppColors.error),
+                              child: Text(
+                                LocaleKeys.common_delete.tr(),
+                                style: const TextStyle(color: AppColors.error),
                               ),
                             ),
                         ],

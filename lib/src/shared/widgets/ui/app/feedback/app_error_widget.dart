@@ -13,18 +13,21 @@ import '../../../../../imports/imports.dart';
 class AppErrorWidget extends StatelessWidget {
   const AppErrorWidget({
     super.key,
-    this.title = 'Something went wrong',
+    this.title,
     this.message,
     this.onRetry,
     this.icon = AppIcons.error,
-    this.retryLabel = 'Try Again',
+    this.retryLabel,
   });
 
-  final String title;
+  /// Falls back to the localized "Something went wrong".
+  final String? title;
   final String? message;
   final VoidCallback? onRetry;
   final dynamic icon;
-  final String retryLabel;
+
+  /// Falls back to the localized "Try Again".
+  final String? retryLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +43,7 @@ class AppErrorWidget extends StatelessWidget {
             AppIcon(icon: icon, size: 56, color: cs.error),
             const SizedBox(height: 16),
             Text(
-              title,
+              title ?? LocaleKeys.states_error_title.tr(),
               style: tt.titleMedium?.copyWith(
                 color: cs.onSurface,
                 fontWeight: FontWeight.bold,
@@ -58,7 +61,7 @@ class AppErrorWidget extends StatelessWidget {
             if (onRetry != null) ...[
               const SizedBox(height: 24),
               AppButton(
-                label: retryLabel,
+                label: retryLabel ?? LocaleKeys.states_try_again.tr(),
                 onPressed: onRetry,
                 variant: ButtonVariant.outline,
               ),

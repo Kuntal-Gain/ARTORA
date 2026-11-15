@@ -26,6 +26,9 @@ abstract class AuthUsecase {
   Future<Resource<void>> forgotPassword({required String email});
   Future<Resource<bool>> isSignedIn();
   Future<Resource<UserModel>> getUser();
+
+  /// Any artist's public profile row.
+  Future<Resource<UserModel>> getUserById(String id);
   Future<Resource<void>> createUser(UserModel user);
 
   /// Whether the signed-in user already has a row in `profiles`.

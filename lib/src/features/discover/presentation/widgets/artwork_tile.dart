@@ -27,6 +27,11 @@ class ArtworkTile extends StatelessWidget {
   final VoidCallback? onFollow;
   final VoidCallback? onTap;
 
+  void _openArtist(BuildContext context) {
+    final id = artwork.artist.id;
+    if (id.isNotEmpty) context.push(AppRoutes.artistProfilePath(id));
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
@@ -111,7 +116,10 @@ class ArtworkTile extends StatelessWidget {
             Padding(
               padding: EdgeInsets.all(AppSpacing.sm),
               child: following == null
-                  ? Row(
+                  ? GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _openArtist(context),
+                      child: Row(
                       children: [
                         _ArtistAvatar(artist: artwork.artist, radius: 14),
                         AppSpacing.hGap(AppSpacing.sm),
@@ -132,11 +140,15 @@ class ArtworkTile extends StatelessWidget {
                           ),
                         ),
                       ],
+                    ),
                     )
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _openArtist(context),
+                          child: Row(
                           children: [
                             _ArtistAvatar(artist: artwork.artist, radius: 12),
                             AppSpacing.hGap(AppSpacing.sm),
@@ -146,6 +158,7 @@ class ArtworkTile extends StatelessWidget {
                               onPressed: onFollow,
                             ),
                           ],
+                        ),
                         ),
                         AppSpacing.vGap(AppSpacing.sm),
                         Text(

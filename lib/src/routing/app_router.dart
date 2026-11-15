@@ -20,6 +20,8 @@ import 'package:artora/src/features/discover/presentation/screens/saved_screen.d
 import 'package:artora/src/features/discover/presentation/screens/search_screen.dart';
 import 'package:artora/src/features/onboarding/view/welcome_screen.dart';
 import 'package:artora/src/features/profile/presentation/screens/profile_screen.dart';
+import 'package:artora/src/features/profile/presentation/screens/follow_list_screen.dart';
+import 'package:artora/src/features/profile/presentation/screens/settings_screen.dart';
 import 'package:artora/src/routing/app_shell.dart';
 import 'package:artora/src/features/splash/view/splash_screen.dart';
 import 'package:artora/src/shared/widgets/ui/ui_showcase_screen.dart';
@@ -102,6 +104,30 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) =>
           CommentsScreen(artworkId: state.pathParameters['id']!),
     ),
+    GoRoute(
+      path: AppRoutes.settings,
+      name: 'settings',
+      builder: (context, state) => const SettingsScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.artistConnections,
+      name: 'artistConnections',
+      builder: (context, state) => FollowListScreen(
+        userId: state.pathParameters['id']!,
+        initialTab: state.uri.queryParameters['tab'] == 'following'
+            ? FollowListTab.following
+            : FollowListTab.followers,
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.artistProfile,
+      name: 'artistProfile',
+      builder: (context, state) => ProfileScreen(
+        userId: state.pathParameters['id'],
+        showBack: true,
+        bottomInset: 24,
+      ),
+    ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
           AppShell(navigationShell: navigationShell),
@@ -138,7 +164,9 @@ final GoRouter appRouter = GoRouter(
             GoRoute(
               path: AppRoutes.profile,
               name: 'profile',
-              builder: (context, state) => const ProfileScreen(),
+              builder: (context, state) => ProfileScreen(
+                onMore: () => context.push(AppRoutes.settings),
+              ),
             ),
           ],
         ),

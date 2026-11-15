@@ -5,8 +5,6 @@ import 'package:artora/src/theme/app_fonts.dart';
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
-  static const int _pageCount = 3;
-
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
@@ -59,20 +57,6 @@ class WelcomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: _onSkip,
-                      style: TextButton.styleFrom(
-                        foregroundColor: colors.onSurface,
-                        minimumSize: const Size(
-                          AppSpacing.touchTarget,
-                          AppSpacing.touchTarget,
-                        ),
-                      ),
-                      child: Text(LocaleKeys.welcome_skip.tr()),
-                    ),
-                  ),
                   const Spacer(),
                   Text(LocaleKeys.welcome_title_line_1.tr(), style: titleStyle),
                   Text(
@@ -89,10 +73,6 @@ class WelcomeScreen extends StatelessWidget {
                       color: colors.onSurface.withValues(alpha: 0.82),
                       height: 1.55,
                     ),
-                  ),
-                  AppSpacing.vGap(AppSpacing.lg),
-                  const Center(
-                    child: _PageDots(count: _pageCount, index: 0),
                   ),
                   AppSpacing.vGap(AppSpacing.lg),
                   AppButton(
@@ -122,40 +102,6 @@ class WelcomeScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  // Home isn't built yet; point Skip at it once it exists.
-  void _onSkip() {}
-}
-
-class _PageDots extends StatelessWidget {
-  const _PageDots({required this.count, required this.index});
-
-  final int count;
-  final int index;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(count, (i) {
-        final active = i == index;
-        return AnimatedContainer(
-          duration: AppDurations.normal,
-          curve: AppCurves.standard,
-          margin: EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-          width: active ? 10.r : 8.r,
-          height: active ? 10.r : 8.r,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: active
-                ? colors.secondary
-                : colors.onSurface.withValues(alpha: 0.3),
-          ),
-        );
-      }),
     );
   }
 }
