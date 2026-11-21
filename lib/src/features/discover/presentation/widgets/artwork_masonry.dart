@@ -1,4 +1,5 @@
 import 'package:artora/src/features/discover/model/discover_models.dart';
+import 'package:artora/src/features/discover/presentation/providers/block_providers.dart';
 import 'package:artora/src/features/discover/presentation/providers/discover_providers.dart';
 import 'package:artora/src/features/discover/presentation/providers/follow_providers.dart';
 import 'package:artora/src/features/discover/presentation/widgets/artwork_tile.dart';
@@ -24,6 +25,8 @@ class ArtworkMasonry extends ConsumerWidget {
     final liked = ref.watch(likedProvider);
     final bookmarked = ref.watch(bookmarkedProvider);
     final following = ref.watch(followingProvider);
+    final me = AppConfig.supabase.auth.currentUser?.id;
+    final blocked = ref.watch(blockedIdsProvider);
 
     return MasonryGrid<Artwork>(
       items: artworks,
@@ -37,9 +40,14 @@ class ArtworkMasonry extends ConsumerWidget {
         onLike: () => toggleLikeOptimistic(ref, artwork.id),
         onBookmark: () =>
             ref.read(bookmarkedProvider.notifier).toggle(artwork.id),
-        isFollowing: showFollow ? following.contains(artwork.artist.id) : null,
+        // null hides the pill: nothing to follow on your own work.
+        isFollowing: showFollow && artwork.artist.id != me
+            ? following.contains(artwork.artist.id)
+            : null,
         onFollow: () =>
-            ref.read(followingProvider.notifier).toggle(artwork.artist.id),
+            ref.read(followActionsProvider).toggle(artwork.artist.id),
+        isBlocked: blocked.contains(artwork.artist.id),
+        onUnblock: () => unblockWithToast(ref, artwork.artist.id),
       ),
     );
   }

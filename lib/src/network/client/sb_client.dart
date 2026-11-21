@@ -370,6 +370,26 @@ class SBClient {
     );
   }
 
+  /// Calls a function that returns `setof <table>` and shapes the rows with
+  /// [columns], so embeds (`images:artwork_images(...)`) work like in [get].
+  Future<Resource<List<SBRow>>> rpcRows(
+    String function, {
+    Map<String, dynamic>? params,
+    String columns = '*',
+  }) {
+    return _run(
+      'rpcRows',
+      function,
+      () async {
+        final rows = await _client
+            .rpc<List<dynamic>>(function, params: params)
+            .select(columns);
+        return List<SBRow>.from(rows);
+      },
+      {'params': params?.keys.toList()},
+    );
+  }
+
   // ── REALTIME: WATCH ────────────────────────────────────────
 
   /// Watches a table and emits its current rows and future changes.

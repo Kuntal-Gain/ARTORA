@@ -4,9 +4,9 @@ import 'package:artora/src/features/auth/presentation/providers/auth_providers.d
 import 'package:artora/src/features/discover/data/discover_usecase.dart';
 import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/state/artwork_provider.dart';
-import 'package:artora/src/features/discover/presentation/providers/follow_providers.dart';
 import 'package:artora/src/services/supabase_storage_service.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show PostgresChangeEvent;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show AuthChangeEvent, PostgresChangeEvent;
 import 'package:artora/src/features/discover/model/discover_models.dart';
 import 'package:artora/src/imports/imports.dart';
 
@@ -181,9 +181,10 @@ final currentArtistProvider =
 // FEED — home feed ("For You" / "Following") and saved
 // ═══════════════════════════════════════════════════════════
 
-/// The API's artwork has no image size yet, so the aspect ratio falls back to
-/// a neutral value. The artist comes from the embedded `profile`; if that is
-/// missing the artist row stays blank.
+/// The image size isn't stored, so aspectRatio is a neutral 1: the tile renders
+/// the image at its natural height once loaded and uses this only for the
+/// loading box and for balancing the two columns. The artist comes from the
+/// embedded `profile`; if that is missing the artist row stays blank.
 Artwork _toArtwork(ArtworkModel model) {
   final image = model.images.isEmpty ? null : model.images.first;
   final profile = model.artist;
@@ -238,7 +239,7 @@ final feedProvider = StateNotifierProvider<LoadNotifier<List<Artwork>>,
   }
 
   final channel = SBClient.instance.subscribeChanges(
-    'likes',
+    SupabaseTables.likes,
     event: PostgresChangeEvent.all,
     // debugPrint, not AppLogger: developer.log doesn't show in `flutter run`.
     onStatus: (status, error) =>
@@ -350,38 +351,68 @@ final likedProvider = StateNotifierProvider<ToggleSetNotifier, Set<String>>((
   );
 });
 
-final bookmarkedProvider =
+/// Drops this provider's state when the user signs out, so the next account
+/// never sees the previous one's data (saved lists are private).
+void _resetOnSignOut(Ref ref) {
+  final sub = AppConfig.supabase.auth.onAuthStateChange.listen((state) {
+    if (state.event == AuthChangeEvent.signedOut) ref.invalidateSelf();
+  });
+  ref.onDispose(sub.cancel);
+}
+
+/// Ids the signed-in user saved: every one, not just those in the feed, so the
+/// bookmark is right on any artwork (including your own private ones).
+// Explicit type: it and savedArtworksProvider reference each other.
+final StateNotifierProvider<ToggleSetNotifier, Set<String>> bookmarkedProvider =
     StateNotifierProvider<ToggleSetNotifier, Set<String>>((ref) {
+  _resetOnSignOut(ref);
   final usecase = ref.watch(discoverUsecaseProvider);
   return ToggleSetNotifier(
-    (id, on) => usecase.toggleSave(id),
-    load: () => _feedIds(usecase, (a) => a.isBookmarked),
+    (id, on) async {
+      final result = await usecase.setSaved(id, saved: on);
+      // Pull the new list in (silently, no spinner) once the server has it.
+      if (result is ResourceSuccess<void>) {
+        unawaited(ref.read(savedArtworksProvider.notifier).refresh());
+      }
+      return result;
+    },
+    load: usecase.getSavedIds,
   );
 });
 
-// ── FEED (derived from feedProvider) ──────────────────────
+// ── FOLLOWING FEED ────────────────────────────────────────
 
-/// Feed narrowed to artists the user follows ("Following" tab).
-final followingFeedProvider = Provider<RequestState<List<Artwork>>>((ref) {
-  final feed = ref.watch(feedProvider);
-  final following = ref.watch(followingProvider);
-  return switch (feed) {
-    RequestSuccess(:final data) => RequestSuccess(
-        data.where((artwork) => following.contains(artwork.artist.id)).toList(),
-      ),
-    _ => feed,
-  };
+/// Latest public work from artists the user follows ("Following" tab), fetched
+/// from the server (`get_following_feed`) so it isn't limited to whatever is
+/// in the For You page. autoDispose: reopening the tab refetches.
+final followingFeedProvider = StateNotifierProvider.autoDispose<
+    LoadNotifier<List<Artwork>>, RequestState<List<Artwork>>>((ref) {
+  final usecase = ref.watch(discoverUsecaseProvider);
+  return LoadNotifier<List<Artwork>>(() async {
+    final result = await usecase.getFollowingPosts();
+    return result.map((list) => list.artworks.map(_toArtwork).toList());
+  });
 });
 
-final savedArtworksProvider = Provider<RequestState<List<Artwork>>>((ref) {
-  final feed = ref.watch(feedProvider);
-  final bookmarked = ref.watch(bookmarkedProvider);
-  return switch (feed) {
-    RequestSuccess(:final data) => RequestSuccess(
-        data.where((artwork) => bookmarked.contains(artwork.id)).toList(),
-      ),
-    _ => feed,
-  };
+/// The signed-in user's saved artworks, newest saved first. Loaded from the
+/// server (own rows only), so it includes saves that aren't in the public feed.
+/// [bookmarkedProvider] refreshes it after every save / unsave.
+final StateNotifierProvider<LoadNotifier<List<Artwork>>,
+        RequestState<List<Artwork>>> savedArtworksProvider =
+    StateNotifierProvider<LoadNotifier<List<Artwork>>,
+        RequestState<List<Artwork>>>((ref) {
+  _resetOnSignOut(ref);
+  final usecase = ref.watch(discoverUsecaseProvider);
+  return LoadNotifier<List<Artwork>>(() async {
+    final uid = AppConfig.supabase.auth.currentUser?.id;
+    if (uid == null) {
+      return const Resource<List<Artwork>>.error(
+        AuthFailure('You are not signed in.', statusCode: 401),
+      );
+    }
+    final result = await usecase.getUserSavedArtworks(uid);
+    return result.map((list) => list.artworks.map(_toArtwork).toList());
+  });
 });
 
 // ═══════════════════════════════════════════════════════════

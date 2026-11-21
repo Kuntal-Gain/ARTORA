@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:artora/src/features/auth/data/auth_usecase.dart';
+import 'package:artora/src/features/auth/model/account_session.dart';
 import 'package:artora/src/features/auth/model/user_model.dart';
 import 'package:artora/src/network/client/sb_client.dart';
 import 'package:artora/src/network/constants/supabase_buckets.dart';
@@ -129,11 +130,16 @@ class AuthUsecaseImpl implements AuthUsecase {
   }
 
   @override
-  Future<Resource<File?>> pickAvatar() async {
+  Future<Resource<File?>> pickAvatar() => _pickImage(1024, 1024);
+
+  @override
+  Future<Resource<File?>> pickCover() => _pickImage(1920, 1080);
+
+  Future<Resource<File?>> _pickImage(double maxWidth, double maxHeight) async {
     final picked = await MediaService.instance.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 1024,
-      maxHeight: 1024,
+      maxWidth: maxWidth,
+      maxHeight: maxHeight,
       imageQuality: 85,
     );
 
@@ -174,21 +180,16 @@ class AuthUsecaseImpl implements AuthUsecase {
   ) async {
     final id = authUser['id'] as String;
 
-    String? avatarPath;
-    final avatar = params.avatar;
-    if (avatar != null) {
-      final ext = _extensionOf(avatar.path);
-      final path = SupabaseBuckets.avatarPath(id, ext: ext);
-      final upload = await _storage.uploadFile(
-        bucket: SupabaseBuckets.avatars,
-        path: path,
-        file: avatar,
-        contentType: _mimeByExtension[ext],
-      );
-      final failure = upload.fold<Failure?>((f) => f, (_) => null);
-      if (failure != null) return Resource<void>.error(failure);
-      avatarPath = path;
+    final upload = await _uploadImage(
+      SupabaseBuckets.avatars,
+      SupabaseBuckets.avatarPath,
+      id,
+      params.avatar,
+    );
+    if (upload case ResourceError<String?>(:final failure)) {
+      return Resource<void>.error(failure);
     }
+    final avatarPath = upload.dataOrNull;
 
     return createUser(
       UserModel(
@@ -203,6 +204,92 @@ class AuthUsecaseImpl implements AuthUsecase {
     );
   }
 
+  /// Uploads [file] to [bucket] at [pathFor] and returns the storage path;
+  /// success with `null` when there is no new file.
+  Future<Resource<String?>> _uploadImage(
+    String bucket,
+    String Function(String userId, {String ext}) pathFor,
+    String userId,
+    File? file, {
+    UploadProgress? onProgress,
+  }) async {
+    if (file == null) return const Resource<String?>.success(null);
+    final ext = _extensionOf(file.path);
+    final path = pathFor(userId, ext: ext);
+    final upload = await _storage.uploadFile(
+      bucket: bucket,
+      path: path,
+      file: file,
+      contentType: _mimeByExtension[ext],
+      onProgress: onProgress,
+    );
+    return upload.fold(
+      (failure) => Resource<String?>.error(failure),
+      (_) => Resource<String?>.success(path),
+    );
+  }
+
+  @override
+  Future<Resource<void>> updateProfile(
+    ProfileSetupParams params, {
+    File? cover,
+    UploadProgress? onProgress,
+  }) async {
+    final authUser = await _authUser();
+    if (authUser case ResourceError<Map<String, dynamic>>(:final failure)) {
+      return Resource<void>.error(failure);
+    }
+    final id = authUser.dataOrNull!['id'] as String;
+
+    // One 0–1 bar across both files, weighted by size.
+    final avatarBytes = await params.avatar?.length() ?? 0;
+    final coverBytes = await cover?.length() ?? 0;
+    final totalBytes = avatarBytes + coverBytes;
+    UploadProgress? part(int offset, int bytes) =>
+        onProgress == null || totalBytes == 0
+            ? null
+            : (p) => onProgress((offset + p * bytes) / totalBytes);
+
+    final upload = await _uploadImage(
+      SupabaseBuckets.avatars,
+      SupabaseBuckets.avatarPath,
+      id,
+      params.avatar,
+      onProgress: part(0, avatarBytes),
+    );
+    if (upload case ResourceError<String?>(:final failure)) {
+      return Resource<void>.error(failure);
+    }
+    final avatarPath = upload.dataOrNull;
+
+    final coverUpload = await _uploadImage(
+      SupabaseBuckets.banners,
+      SupabaseBuckets.coverPath,
+      id,
+      cover,
+      onProgress: part(avatarBytes, coverBytes),
+    );
+    if (coverUpload case ResourceError<String?>(:final failure)) {
+      return Resource<void>.error(failure);
+    }
+    final coverPath = coverUpload.dataOrNull;
+
+    // Patch only the edited columns so website and socials stay as-is.
+    final res = await _db.patch(
+      SupabaseTables.profiles,
+      {
+        'display_name': params.displayName,
+        'username': params.username,
+        'bio': params.bio,
+        'specialties': params.specialties,
+        if (avatarPath != null) 'avatar_path': avatarPath,
+        if (coverPath != null) 'cover_path': coverPath,
+      },
+      eq: {'id': id},
+    );
+    return res.map<void>((_) {});
+  }
+
   @override
   Future<Resource<void>> signIn({
     required String email,
@@ -211,6 +298,46 @@ class AuthUsecaseImpl implements AuthUsecase {
     final res = await _auth.login(email: email, password: password);
     return Resource.fromEither(res.map<void>((_) {}));
   }
+
+  @override
+  Future<Resource<void>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final verified = await _auth.verifyPassword(currentPassword);
+    final rejected = verified.fold<Failure?>(
+      (failure) => failure,
+      (matches) => matches
+          ? null
+          : const ValidationFailure('Current password is incorrect.'),
+    );
+    if (rejected != null) return Resource<void>.error(rejected);
+
+    final updated = await _auth.updatePassword(newPassword);
+    final failure = updated.fold<Failure?>((f) => f, (_) => null);
+    if (failure != null) return Resource<void>.error(failure);
+
+    // The password is already changed; signing the others out is a safety
+    // extra, so a failure here must not turn the change into an error.
+    await _auth.signOutOtherDevices();
+    return const Resource<void>.success(null);
+  }
+
+  @override
+  Future<Resource<List<AccountSession>>> listSessions() async {
+    final res = await _auth.listSessions();
+    return Resource.fromEither(
+      res.map((rows) => rows.map(AccountSession.fromJson).toList()),
+    );
+  }
+
+  @override
+  Future<Resource<void>> revokeSession(String sessionId) async =>
+      Resource.fromEither(await _auth.revokeSession(sessionId));
+
+  @override
+  Future<Resource<void>> signOutOtherDevices() async =>
+      Resource.fromEither(await _auth.signOutOtherDevices());
 
   @override
   Future<Resource<void>> signOut() async {

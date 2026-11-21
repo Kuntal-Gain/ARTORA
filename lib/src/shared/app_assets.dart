@@ -9,6 +9,7 @@ class AppAssets {
   static const String logo = '$_imagesPath/logo.png';
   static const String splashBackground = '$_imagesPath/splash.png';
   static const String welcomeBackground = '$_imagesPath/welcome.png';
+  static const String notFound = '$_imagesPath/404.svg';
 
   // SVGs
   static const String googleIcon = '$_iconsPath/google.svg';

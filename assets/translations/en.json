@@ -101,6 +101,69 @@
     "username_not_verified": "Username is not verified. Please try again.",
     "username_checking": "Checking username..."
   },
+  "not_found": {
+    "title": "Page not found",
+    "message": "The page you're looking for doesn't exist or has moved.",
+    "go_home": "Go to Home"
+  },
+  "block": {
+    "block_user": "Block user",
+    "title": "Block @{username}?",
+    "message": "They won't be able to see your profile, artworks or comments, and any follows between you will be removed. You can still see them, and they won't be told.",
+    "confirm": "Block",
+    "user_blocked": "User blocked",
+    "unblock_user": "Unblock user",
+    "unblock": "Unblock",
+    "blocked_chip": "Blocked",
+    "none_title": "No blocked users",
+    "none_subtitle": "People you block will show up here. They can't see your profile or posts.",
+    "load_failed": "Couldn't load your blocked users.",
+    "user_is_blocked": "This user is blocked",
+    "blocked_hint": "Unblock them from the ⋮ menu to see their posts and follow them again.",
+    "unblock_first": "Unblock this user first.",
+    "user_unblocked": "User unblocked"
+  },
+  "account_settings": {
+    "title": "Account Settings",
+    "email_section": "Email",
+    "email_readonly": "Your email can't be changed.",
+    "password_section": "Change password",
+    "current_password": "Current password",
+    "new_password": "New password",
+    "confirm_new_password": "Confirm new password",
+    "update_password": "Update password",
+    "password_updated": "Password updated. Your other devices were signed out.",
+    "sessions_section": "Active sessions",
+    "sessions_hint": "Devices signed in to your account.",
+    "this_device": "This device",
+    "app_device": "Artora app",
+    "unknown_device": "Unknown device",
+    "active": "Active {when}",
+    "sign_out_others": "Sign out all other devices",
+    "no_other_devices": "No other devices are signed in.",
+    "sessions_failed": "Couldn't load your devices.",
+    "device_signed_out": "Device signed out",
+    "device_sign_out_title": "Sign out this device?",
+    "device_sign_out_message": "It will need to sign in again.",
+    "others_sign_out_title": "Sign out all other devices?",
+    "others_sign_out_message": "Every device except this one will need to sign in again."
+  },
+  "preview_crop": {
+    "manual": "Manual",
+    "crop_failed": "Couldn't crop this image."
+  },
+  "edit_profile": {
+    "title": "Edit Profile",
+    "tap_to_change": "Tap to change photo",
+    "photo_hint": "PNG, JPG or WebP up to 2 MB",
+    "cover": "Cover Image",
+    "change_cover": "Change cover",
+    "username_available": "Username is available",
+    "specialties_max": "(Max {max})",
+    "preview": "Preview",
+    "save": "Save Changes",
+    "saved": "Profile updated"
+  },
   "discover": {
     "search_hint_home": "Search artists, artwork, tags...",
     "search_hint_explore": "Search artwork, artists, tags...",
@@ -187,6 +250,8 @@
     "no_artworks": "No artworks yet",
     "empty_artworks_hint": "Share your first artwork and start building your creative journey.",
     "empty_artworks_cta": "Create Your First Artwork",
+    "other_empty_artworks_hint": "They haven't shared any artwork yet.",
+    "other_empty_collections_hint": "They haven't created any collections yet.",
     "empty_collections_hint": "Group your favorite artworks into collections and share them with everyone.",
     "empty_collections_cta": "Create Your First Collection",
     "collections_soon": "Collections are coming soon",
@@ -205,7 +270,9 @@
     "delete": "Delete",
     "edit": "Edit",
     "share": "Share",
-    "coming_soon": "Coming soon"
+    "coming_soon": "Coming soon",
+    "uploading_image": "Uploading image…",
+    "loading": "Loading..."
   },
   "settings": {
     "title": "Settings",

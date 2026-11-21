@@ -4,6 +4,7 @@ import 'package:artora/src/features/discover/data/discover_helper.dart';
 import 'package:artora/src/features/discover/data/discover_usecase.dart';
 import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/model/artwork_req_model.dart';
+import 'package:artora/src/features/discover/model/blocked_user_model.dart';
 import 'package:artora/src/features/discover/model/collection_model.dart';
 import 'package:artora/src/features/discover/model/comment_model.dart';
 import 'package:artora/src/features/discover/model/discover_models.dart';
@@ -12,6 +13,7 @@ import 'package:artora/src/network/client/sb_client.dart';
 import 'package:artora/src/network/constants/supabase_tables.dart';
 import 'package:artora/src/network/failures/failure.dart';
 import 'package:artora/src/network/resource/resource.dart';
+import 'package:artora/src/services/supabase_storage_service.dart';
 
 /// The discover operations. Only the contract's methods live here; queries and
 /// row mapping are in [DiscoverHelper].
@@ -26,6 +28,12 @@ class DiscoverUsecaseImpl implements DiscoverUsecase {
       eq: {'visibility': 'public'},
     );
   }
+
+  // ── GET FOLLOWING FEED ───────────────────────────────────
+
+  @override
+  Future<Resource<ArtworkListModel>> getFollowingPosts() =>
+      _h.getFollowingPage();
 
   // ── SEARCH ───────────────────────────────────────────────
 
@@ -89,6 +97,48 @@ class DiscoverUsecaseImpl implements DiscoverUsecase {
   Future<Resource<void>> unfollowUser(String userId) =>
       setFollowing(userId, following: false);
 
+  // ── BLOCKS ───────────────────────────────────────────────
+  // Needs supabase/blocks.sql. RLS limits blocked_users to the caller's own
+  // rows, so no user id filter is needed here.
+
+  @override
+  Future<Resource<void>> blockUser(String userId) async {
+    final existing = await _h.db.getOne(
+      SupabaseTables.blockedUsers,
+      columns: 'blocked_id',
+      eq: {'blocked_id': userId},
+    );
+    return switch (existing) {
+      ResourceSuccess<SBRow>() => const Resource<void>.success(null),
+      ResourceError<SBRow>(:final failure) when failure is NotFoundFailure =>
+        (await _h.db.post(SupabaseTables.blockedUsers, {'blocked_id': userId}))
+            .map<void>((_) {}),
+      ResourceError<SBRow>(:final failure) => Resource<void>.error(failure),
+      ResourceLoading<SBRow>() => const Resource<void>.loading(),
+    };
+  }
+
+  @override
+  Future<Resource<void>> unblockUser(String userId) async =>
+      (await _h.db.delete(
+        SupabaseTables.blockedUsers,
+        eq: {'blocked_id': userId},
+      ))
+          .map<void>((_) {});
+
+  @override
+  Future<Resource<List<BlockedUserModel>>> getBlockedUsers() async {
+    final result = await _h.db.rpc<List<dynamic>>(
+      SupabaseRpc.listBlockedUsers,
+    );
+    return result.map(
+      (rows) => [
+        for (final row in rows)
+          BlockedUserModel.fromJson(Map<String, dynamic>.from(row as Map)),
+      ],
+    );
+  }
+
   @override
   Future<Resource<List<FollowUserModel>>> getFollowers(
     String userId, {
@@ -113,7 +163,7 @@ class DiscoverUsecaseImpl implements DiscoverUsecase {
   ) async {
     final result = await _h.db.rpc<List<dynamic>>(
       function,
-      params: {'p_uid': userId, 'p_limit': limit, 'p_offset': offset},
+      params: {'uid': userId, 'page_limit': limit, 'page_offset': offset},
     );
     return result.map(
       (rows) => [
@@ -442,7 +492,7 @@ class DiscoverUsecaseImpl implements DiscoverUsecase {
     String uid,
   ) {
     return _h.getRelationPage(
-      table: DiscoverHelper.likesTable,
+      table: SupabaseTables.likes,
       uid: uid,
     );
   }
@@ -457,7 +507,7 @@ class DiscoverUsecaseImpl implements DiscoverUsecase {
 
     return switch (auth) {
       ResourceSuccess<String>(:final data) when data == uid => _h.getRelationPage(
-          table: DiscoverHelper.bookmarksTable,
+          table: SupabaseTables.savedArtworks,
           uid: uid,
         ),
       ResourceSuccess<String>() => const Resource<ArtworkListModel>.error(
@@ -476,15 +526,20 @@ class DiscoverUsecaseImpl implements DiscoverUsecase {
 
   @override
   Future<Resource<void>> postArtwork(
-    PostArtworkModel artwork,
-  ) async {
+    PostArtworkModel artwork, {
+    UploadProgress? onProgress,
+  }) async {
     final auth = await _h.authUserId();
     if (auth case ResourceError<String>(:final failure)) {
       return Resource<void>.error(failure);
     }
     final uid = (auth as ResourceSuccess<String>).data;
 
-    final uploaded = await _h.uploadImages(uid, artwork.images);
+    final uploaded = await _h.uploadImages(
+      uid,
+      artwork.images,
+      onProgress: onProgress,
+    );
     if (uploaded case ResourceError<List<SBRow>>(:final failure)) {
       return Resource<void>.error(failure);
     }
@@ -515,15 +570,20 @@ class DiscoverUsecaseImpl implements DiscoverUsecase {
   @override
   Future<Resource<void>> updateArtwork(
     String artworkId,
-    PostArtworkModel artwork,
-  ) async {
+    PostArtworkModel artwork, {
+    UploadProgress? onProgress,
+  }) async {
     final auth = await _h.authUserId();
     if (auth case ResourceError<String>(:final failure)) {
       return Resource<void>.error(failure);
     }
     final uid = (auth as ResourceSuccess<String>).data;
 
-    final uploaded = await _h.uploadImages(uid, artwork.images);
+    final uploaded = await _h.uploadImages(
+      uid,
+      artwork.images,
+      onProgress: onProgress,
+    );
     if (uploaded case ResourceError<List<SBRow>>(:final failure)) {
       return Resource<void>.error(failure);
     }
@@ -621,10 +681,22 @@ class DiscoverUsecaseImpl implements DiscoverUsecase {
     String artworkId,
   ) {
     return _h.toggleRelation(
-      table: DiscoverHelper.bookmarksTable,
+      table: SupabaseTables.savedArtworks,
       artworkId: artworkId,
     );
   }
+
+  @override
+  Future<Resource<void>> setSaved(String artworkId, {required bool saved}) {
+    return _h.setRelation(
+      table: SupabaseTables.savedArtworks,
+      artworkId: artworkId,
+      on: saved,
+    );
+  }
+
+  @override
+  Future<Resource<Set<String>>> getSavedIds() => _h.getSavedIds();
 
   // ═══════════════════════════════════════════════════════════
   // EXPLORE

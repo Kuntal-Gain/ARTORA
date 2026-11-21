@@ -52,7 +52,10 @@ class AppArtistRow extends StatelessWidget {
     this.bio,
     this.isVerified = false,
     this.isFollowing,
+    this.isFollowLoading = false,
     this.onFollow,
+    this.isBlocked = false,
+    this.onUnblock,
     this.onTap,
     this.onMore,
   });
@@ -65,7 +68,12 @@ class AppArtistRow extends StatelessWidget {
 
   /// `null` hides the follow button.
   final bool? isFollowing;
+  final bool isFollowLoading;
   final VoidCallback? onFollow;
+
+  /// You blocked them: an Unblock button replaces the follow button.
+  final bool isBlocked;
+  final VoidCallback? onUnblock;
   final VoidCallback? onTap;
   final VoidCallback? onMore;
 
@@ -87,7 +95,17 @@ class AppArtistRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AppArtistName(name: name, isVerified: isVerified),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: AppArtistName(name: name, isVerified: isVerified),
+                      ),
+                      if (isBlocked) ...[
+                        AppSpacing.hGap(AppSpacing.sm),
+                        const AppBlockedChip(),
+                      ],
+                    ],
+                  ),
                   Text(
                     handle,
                     style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
@@ -102,9 +120,21 @@ class AppArtistRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (isFollowing != null) ...[
+            if (isBlocked) ...[
               AppSpacing.hGap(AppSpacing.sm),
-              AppFollowButton(isFollowing: isFollowing!, onPressed: onFollow),
+              AppButton(
+                label: LocaleKeys.block_unblock.tr(),
+                variant: ButtonVariant.outline,
+                height: ButtonSize.small,
+                onPressed: onUnblock,
+              ),
+            ] else if (isFollowing != null) ...[
+              AppSpacing.hGap(AppSpacing.sm),
+              AppFollowButton(
+                isFollowing: isFollowing!,
+                isLoading: isFollowLoading,
+                onPressed: onFollow,
+              ),
             ],
             if (onMore != null)
               IconButton(

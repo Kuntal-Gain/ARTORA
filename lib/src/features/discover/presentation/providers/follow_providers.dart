@@ -28,6 +28,9 @@ final followingProvider =
   );
 });
 
+/// Ids with a follow / unfollow request in flight; their buttons show Loading.
+final followPendingProvider = StateProvider<Set<String>>((ref) => const {});
+
 // ── FOLLOWERS ───────────────────────────────────────────────
 
 /// People who follow [userId] (needs supabase/follows.sql).
@@ -71,15 +74,27 @@ class FollowActions {
   /// No-op if you already follow [userId].
   Future<void> followUser(String userId) async {
     if (_ref.read(followingProvider).contains(userId)) return;
-    await _ref.read(followingProvider.notifier).toggle(userId);
-    _refreshCounts();
+    await toggle(userId);
   }
 
   /// No-op if you don't follow [userId]. Their follow of you is untouched, so
   /// they stay your follower and you get a Follow Back option again.
   Future<void> unfollowUser(String userId) async {
     if (!_ref.read(followingProvider).contains(userId)) return;
-    await _ref.read(followingProvider.notifier).toggle(userId);
+    await toggle(userId);
+  }
+
+  /// Follows or unfollows; marks [userId] pending meanwhile and ignores taps
+  /// while a request for it is already in flight.
+  Future<void> toggle(String userId) async {
+    final pending = _ref.read(followPendingProvider.notifier);
+    if (pending.state.contains(userId)) return;
+    pending.state = {...pending.state, userId};
+    try {
+      await _ref.read(followingProvider.notifier).toggle(userId);
+    } finally {
+      pending.state = {...pending.state}..remove(userId);
+    }
     _refreshCounts();
   }
 

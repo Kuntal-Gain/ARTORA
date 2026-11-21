@@ -1,7 +1,9 @@
 import 'dart:io';
 
+import 'package:artora/src/features/auth/model/account_session.dart';
 import 'package:artora/src/features/auth/model/user_model.dart';
 import 'package:artora/src/imports/core_imports.dart';
+import 'package:artora/src/services/supabase_storage_service.dart';
 
 typedef ProfileSetupParams = ({
   String displayName,
@@ -42,4 +44,31 @@ abstract class AuthUsecase {
 
   /// Uploads the avatar (if any) and creates the signed-in user's profile.
   Future<Resource<void>> setupProfile(ProfileSetupParams params);
+
+  /// Changes the password after checking [currentPassword], then signs every
+  /// other device out. Needs supabase/account.sql.
+  Future<Resource<void>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
+
+  /// The signed-in user's devices, most recently used first.
+  Future<Resource<List<AccountSession>>> listSessions();
+
+  /// Signs one other device out (not the current one).
+  Future<Resource<void>> revokeSession(String sessionId);
+
+  /// Signs every device out except this one.
+  Future<Resource<void>> signOutOtherDevices();
+
+  /// Lets the user choose a wide cover photo; same contract as [pickAvatar].
+  Future<Resource<File?>> pickCover();
+
+  /// Updates the signed-in user's profile; a `null` avatar or [cover] keeps
+  /// the current one. [onProgress] reports the photo uploads (0–1).
+  Future<Resource<void>> updateProfile(
+    ProfileSetupParams params, {
+    File? cover,
+    UploadProgress? onProgress,
+  });
 }

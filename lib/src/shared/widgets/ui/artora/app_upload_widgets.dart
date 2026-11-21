@@ -43,6 +43,92 @@ class AppUploadProgress extends StatelessWidget {
   }
 }
 
+/// Card with the image being uploaded and an [AppUploadProgress] bar.
+class AppUploadCard extends StatelessWidget {
+  const AppUploadCard({
+    super.key,
+    required this.value,
+    required this.label,
+    this.image,
+  });
+
+  final double value;
+  final String label;
+  final ImageProvider? image;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colors;
+    return Container(
+      width: 260.r,
+      padding: EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: AppBorders.lg,
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (image != null) ...[
+            ClipRRect(
+              borderRadius: AppBorders.md,
+              child: Image(
+                image: image!,
+                width: 112.r,
+                height: 112.r,
+                fit: BoxFit.cover,
+              ),
+            ),
+            AppSpacing.vGap(AppSpacing.lg),
+          ],
+          AppUploadProgress(value: value, label: label),
+        ],
+      ),
+    );
+  }
+}
+
+/// Covers [child] with a dimmed barrier and an [AppUploadCard] while
+/// [progress] is non-null.
+class AppUploadOverlay extends StatelessWidget {
+  const AppUploadOverlay({
+    super.key,
+    required this.progress,
+    required this.label,
+    required this.child,
+    this.image,
+  });
+
+  final ValueListenable<double?> progress;
+  final String label;
+  final ImageProvider? image;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        child,
+        ValueListenableBuilder<double?>(
+          valueListenable: progress,
+          builder: (context, value, _) {
+            if (value == null) return const SizedBox.shrink();
+            return Positioned.fill(
+              child: ColoredBox(
+                color: AppColors.background.withValues(alpha: 0.6),
+                child: Center(
+                  child: AppUploadCard(value: value, label: label, image: image),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
 /// Empty image slot (e.g. before an artwork is picked).
 class AppImagePlaceholder extends StatelessWidget {
   const AppImagePlaceholder({

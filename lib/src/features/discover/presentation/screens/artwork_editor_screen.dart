@@ -272,7 +272,14 @@ class _ArtworkEditorScreenState extends ConsumerState<ArtworkEditorScreen> {
           ),
         ),
       ),
-      body: SafeArea(top: false, child: body),
+      body: AppUploadOverlay(
+        progress: id == null
+            ? ref.watch(postArtworkProvider.notifier).progress
+            : ref.watch(updateArtworkProvider(id).notifier).progress,
+        label: LocaleKeys.common_uploading_image.tr(),
+        image: _image == null ? null : FileImage(_image!),
+        child: SafeArea(top: false, child: body),
+      ),
     );
   }
 

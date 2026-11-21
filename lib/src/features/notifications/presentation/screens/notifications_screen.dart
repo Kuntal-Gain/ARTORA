@@ -1,4 +1,4 @@
-import 'package:artora/src/features/discover/presentation/providers/follow_providers.dart';
+import 'package:artora/src/features/discover/presentation/widgets/follow_button.dart';
 import 'package:artora/src/features/notifications/model/notification_model.dart';
 import 'package:artora/src/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:artora/src/imports/imports.dart';
@@ -530,49 +530,14 @@ class _Thumb extends StatelessWidget {
   }
 }
 
-/// Outlined Follow Back until you follow them, then Following (tap to undo).
-class _FollowBackButton extends ConsumerWidget {
+/// Follow Back until you follow them, then Following (tap to undo).
+class _FollowBackButton extends StatelessWidget {
   const _FollowBackButton({required this.userId});
 
   final String userId;
 
+  // They followed you, so the not-following state is always Follow Back.
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final following = ref.watch(followingProvider).contains(userId);
-    final color = following ? AppColors.textPrimary : AppColors.primary;
-    return SizedBox(
-      width: 100.w,
-      height: 32.h,
-      child: Material(
-        color: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: AppBorders.md,
-          side: BorderSide(color: following ? AppColors.border : color),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () {
-            final actions = ref.read(followActionsProvider);
-            following
-                ? actions.unfollowUser(userId)
-                : actions.followUser(userId);
-          },
-          child: Center(
-            child: Text(
-              (following
-                      ? LocaleKeys.discover_following
-                      : LocaleKeys.follow_list_follow_back)
-                  .tr(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.textTheme.labelMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      FollowButton(userId: userId, followsMe: true, width: 112.w);
 }

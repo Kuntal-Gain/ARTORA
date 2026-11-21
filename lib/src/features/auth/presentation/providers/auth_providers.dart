@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:artora/src/features/auth/data/auth_usecase.dart';
 import 'package:artora/src/features/auth/data/auth_usecase_impl.dart';
+import 'package:artora/src/features/auth/model/account_session.dart';
 import 'package:artora/src/features/auth/model/user_model.dart';
 import 'package:artora/src/imports/imports.dart';
 
@@ -102,16 +103,85 @@ class ProfileSetupNotifier extends StateNotifier<RequestState<void>> {
   }
 }
 
-/// Holds the photo chosen on the profile setup screen.
-class ProfileAvatarNotifier extends StateNotifier<File?> {
-  ProfileAvatarNotifier(this._usecase) : super(null);
+class EditProfileNotifier extends StateNotifier<RequestState<void>> {
+  EditProfileNotifier(this._usecase) : super(const RequestInitial());
 
   final AuthUsecase _usecase;
+
+  /// Photo upload progress (0–1); `null` when nothing is uploading.
+  final progress = ValueNotifier<double?>(null);
+
+  Future<void> submit(ProfileSetupParams params, {File? cover}) async {
+    state = const RequestLoading();
+    final result = await _usecase.updateProfile(
+      params,
+      cover: cover,
+      onProgress: (p) {
+        if (mounted) progress.value = p;
+      },
+    );
+    if (!mounted) return;
+    progress.value = null;
+    state = result.toRequestState();
+  }
+
+  @override
+  void dispose() {
+    progress.dispose();
+    super.dispose();
+  }
+}
+
+class ChangePasswordNotifier extends StateNotifier<RequestState<void>> {
+  ChangePasswordNotifier(this._usecase) : super(const RequestInitial());
+
+  final AuthUsecase _usecase;
+
+  Future<void> submit(String currentPassword, String newPassword) async {
+    state = const RequestLoading();
+    final result = await _usecase.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+    );
+    if (!mounted) return;
+    state = result.toRequestState();
+  }
+}
+
+/// Signing devices out; [onChanged] reloads the sessions list afterwards.
+class SessionActionsNotifier extends StateNotifier<RequestState<void>> {
+  SessionActionsNotifier(this._usecase, {required void Function() onChanged})
+      : _onChanged = onChanged,
+        super(const RequestInitial());
+
+  final AuthUsecase _usecase;
+  final void Function() _onChanged;
+
+  Future<void> revoke(String sessionId) =>
+      _run(() => _usecase.revokeSession(sessionId));
+
+  Future<void> signOutOthers() => _run(_usecase.signOutOtherDevices);
+
+  Future<void> _run(Future<Resource<void>> Function() action) async {
+    if (state.isLoading) return;
+    state = const RequestLoading();
+    final result = await action();
+    if (!mounted) return;
+    state = result.toRequestState();
+    if (state is RequestSuccess<void>) _onChanged();
+  }
+}
+
+/// Holds a photo (avatar or cover) chosen on the profile setup / edit screen.
+class ProfileAvatarNotifier extends StateNotifier<File?> {
+  ProfileAvatarNotifier(this._pick) : super(null);
+
+  final Future<Resource<File?>> Function() _pick;
 
   /// Returns the failure to show, or `null` when a photo was chosen or the
   /// picker was dismissed (the previous photo is kept in that case).
   Future<Failure?> pick() async {
-    final result = await _usecase.pickAvatar();
+    final result = await _pick();
     if (!mounted) return null;
     switch (result) {
       case ResourceSuccess<File?>(:final data):
@@ -180,9 +250,41 @@ final profileSetupProvider =
     StateNotifierProvider.autoDispose<ProfileSetupNotifier, RequestState<void>>(
         (ref) => ProfileSetupNotifier(ref.watch(authUsecaseProvider)));
 
+final changePasswordProvider = StateNotifierProvider.autoDispose<
+        ChangePasswordNotifier, RequestState<void>>(
+    (ref) => ChangePasswordNotifier(ref.watch(authUsecaseProvider)));
+
+/// The signed-in user's devices. Errors carry the failure message.
+final accountSessionsProvider =
+    FutureProvider.autoDispose<List<AccountSession>>((ref) async {
+  final result = await ref.watch(authUsecaseProvider).listSessions();
+  return switch (result) {
+    ResourceSuccess<List<AccountSession>>(:final data) => data,
+    ResourceError<List<AccountSession>>(:final failure) =>
+      throw failure.message,
+    ResourceLoading<List<AccountSession>>() => const <AccountSession>[],
+  };
+});
+
+final sessionActionsProvider = StateNotifierProvider.autoDispose<
+        SessionActionsNotifier, RequestState<void>>(
+    (ref) => SessionActionsNotifier(
+          ref.watch(authUsecaseProvider),
+          onChanged: () => ref.invalidate(accountSessionsProvider),
+        ));
+
+final editProfileProvider =
+    StateNotifierProvider.autoDispose<EditProfileNotifier, RequestState<void>>(
+        (ref) => EditProfileNotifier(ref.watch(authUsecaseProvider)));
+
 final profileAvatarProvider =
     StateNotifierProvider.autoDispose<ProfileAvatarNotifier, File?>(
-  (ref) => ProfileAvatarNotifier(ref.watch(authUsecaseProvider)),
+  (ref) => ProfileAvatarNotifier(ref.watch(authUsecaseProvider).pickAvatar),
+);
+
+final profileCoverProvider =
+    StateNotifierProvider.autoDispose<ProfileAvatarNotifier, File?>(
+  (ref) => ProfileAvatarNotifier(ref.watch(authUsecaseProvider).pickCover),
 );
 
 final usernameAvailabilityProvider = StateNotifierProvider.autoDispose<

@@ -9,11 +9,15 @@ abstract final class SupabaseBuckets {
   static const String avatars = 'user-profiles';
   static const String artworks = 'artworks';
   static const String thumbnails = 'thumbnails';
-  static const String banners = 'banners';
+  static const String banners = 'user-covers';
 
   /// Avatar path: `<userId>/avatar.<ext>`.
   static String avatarPath(String userId, {String ext = 'jpg'}) =>
       '$userId/avatar.$ext';
+
+  /// Profile cover path (in [banners]): `<userId>/cover.<ext>`.
+  static String coverPath(String userId, {String ext = 'jpg'}) =>
+      '$userId/cover.$ext';
 
   /// Artwork path: `<userId>/<artworkId>.<ext>`.
   static String artworkPath(String userId, String artworkId,

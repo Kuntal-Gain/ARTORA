@@ -230,11 +230,17 @@ class ArtistCard extends StatelessWidget {
     required this.artist,
     required this.isFollowing,
     required this.onFollow,
+    this.isBlocked = false,
+    this.onUnblock,
   });
 
   final Artist artist;
   final bool isFollowing;
   final VoidCallback onFollow;
+
+  /// You blocked this artist: the Follow pill becomes Unblock.
+  final bool isBlocked;
+  final VoidCallback? onUnblock;
 
   @override
   Widget build(BuildContext context) {
@@ -287,7 +293,11 @@ class ArtistCard extends StatelessWidget {
           ),
           AppSpacing.vGap(AppSpacing.sm),
           FollowPill(
-              isFollowing: isFollowing, onPressed: onFollow, filled: true),
+            isFollowing: isFollowing,
+            blocked: isBlocked,
+            onPressed: isBlocked ? onUnblock : onFollow,
+            filled: true,
+          ),
         ],
       ),
     );

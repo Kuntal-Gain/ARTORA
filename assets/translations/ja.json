@@ -101,6 +101,69 @@
     "username_not_verified": "ユーザー名を確認できませんでした。もう一度お試しください。",
     "username_checking": "ユーザー名を確認中..."
   },
+  "not_found": {
+    "title": "ページが見つかりません",
+    "message": "お探しのページは存在しないか、移動した可能性があります。",
+    "go_home": "ホームへ戻る"
+  },
+  "block": {
+    "block_user": "ユーザーをブロック",
+    "title": "@{username} をブロックしますか？",
+    "message": "相手はあなたのプロフィール、作品、コメントを見られなくなり、フォロー関係も解除されます。あなたは引き続き相手を見ることができ、相手には通知されません。",
+    "confirm": "ブロック",
+    "user_blocked": "ユーザーをブロックしました",
+    "unblock_user": "ブロックを解除",
+    "unblock": "解除",
+    "blocked_chip": "ブロック中",
+    "none_title": "ブロックしたユーザーはいません",
+    "none_subtitle": "ブロックしたユーザーがここに表示されます。相手はあなたのプロフィールや投稿を見られません。",
+    "load_failed": "ブロックしたユーザーを読み込めませんでした。",
+    "user_is_blocked": "このユーザーはブロック中です",
+    "blocked_hint": "⋮メニューからブロックを解除すると、投稿の表示とフォローができるようになります。",
+    "unblock_first": "先にブロックを解除してください。",
+    "user_unblocked": "ブロックを解除しました"
+  },
+  "account_settings": {
+    "title": "アカウント設定",
+    "email_section": "メールアドレス",
+    "email_readonly": "メールアドレスは変更できません。",
+    "password_section": "パスワードを変更",
+    "current_password": "現在のパスワード",
+    "new_password": "新しいパスワード",
+    "confirm_new_password": "新しいパスワード（確認）",
+    "update_password": "パスワードを更新",
+    "password_updated": "パスワードを更新しました。他の端末はログアウトされました。",
+    "sessions_section": "ログイン中の端末",
+    "sessions_hint": "アカウントにログインしている端末です。",
+    "this_device": "この端末",
+    "app_device": "Artoraアプリ",
+    "unknown_device": "不明な端末",
+    "active": "最終使用 {when}",
+    "sign_out_others": "他のすべての端末からログアウト",
+    "no_other_devices": "他にログイン中の端末はありません。",
+    "sessions_failed": "端末を読み込めませんでした。",
+    "device_signed_out": "端末をログアウトしました",
+    "device_sign_out_title": "この端末をログアウトしますか？",
+    "device_sign_out_message": "再度ログインが必要になります。",
+    "others_sign_out_title": "他のすべての端末からログアウトしますか？",
+    "others_sign_out_message": "この端末以外のすべての端末で再度ログインが必要になります。"
+  },
+  "preview_crop": {
+    "manual": "手動",
+    "crop_failed": "この画像をトリミングできませんでした。"
+  },
+  "edit_profile": {
+    "title": "プロフィールを編集",
+    "tap_to_change": "タップして写真を変更",
+    "photo_hint": "PNG・JPG・WebP、2MBまで",
+    "cover": "カバー画像",
+    "change_cover": "カバーを変更",
+    "username_available": "このユーザー名は使用できます",
+    "specialties_max": "(最大{max}つ)",
+    "preview": "プレビュー",
+    "save": "変更を保存",
+    "saved": "プロフィールを更新しました"
+  },
   "discover": {
     "search_hint_home": "アーティスト、作品、タグを検索...",
     "search_hint_explore": "作品、アーティスト、タグを検索...",
@@ -187,6 +250,8 @@
     "no_artworks": "作品はまだありません",
     "empty_artworks_hint": "最初の作品を共有して、あなたのクリエイティブな旅を始めましょう。",
     "empty_artworks_cta": "最初の作品を作成",
+    "other_empty_artworks_hint": "まだ作品を投稿していません。",
+    "other_empty_collections_hint": "まだコレクションを作成していません。",
     "empty_collections_hint": "お気に入りの作品をコレクションにまとめて、みんなに共有しましょう。",
     "empty_collections_cta": "最初のコレクションを作成",
     "collections_soon": "コレクション機能は近日公開です",
@@ -205,7 +270,9 @@
     "delete": "削除",
     "edit": "編集",
     "share": "共有",
-    "coming_soon": "近日公開"
+    "coming_soon": "近日公開",
+    "uploading_image": "画像をアップロード中…",
+    "loading": "読み込み中..."
   },
   "settings": {
     "title": "設定",

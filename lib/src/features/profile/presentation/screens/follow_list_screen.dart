@@ -1,6 +1,8 @@
 import 'package:artora/src/features/auth/presentation/providers/auth_providers.dart';
 import 'package:artora/src/features/discover/model/follow_model.dart';
+import 'package:artora/src/features/discover/presentation/providers/block_providers.dart';
 import 'package:artora/src/features/discover/presentation/providers/follow_providers.dart';
+import 'package:artora/src/features/discover/presentation/widgets/follow_button.dart';
 import 'package:artora/src/features/discover/presentation/widgets/underline_tabs.dart';
 import 'package:artora/src/imports/imports.dart';
 import 'package:artora/src/shared/widgets/navigation/artora_bottom_nav.dart';
@@ -151,7 +153,7 @@ class _FollowListScreenState extends ConsumerState<FollowListScreen> {
       );
     }
     final me = AppConfig.supabase.auth.currentUser?.id;
-    final following = ref.watch(followingProvider);
+    final blocked = ref.watch(blockedIdsProvider);
 
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(
@@ -163,21 +165,16 @@ class _FollowListScreenState extends ConsumerState<FollowListScreen> {
       itemCount: users.length,
       itemBuilder: (context, i) {
         final user = users[i];
-        final isFollowing = following.contains(user.id);
         return _UserRow(
           user: user,
+          blocked: blocked.contains(user.id),
           // Nothing to follow on your own row.
           button: user.id == me
               ? null
-              : _FollowButton(
-                  isFollowing: isFollowing,
-                  followBack: user.followsMe,
-                  onPressed: () {
-                    final actions = ref.read(followActionsProvider);
-                    isFollowing
-                        ? actions.unfollowUser(user.id)
-                        : actions.followUser(user.id);
-                  },
+              : FollowButton(
+                  userId: user.id,
+                  followsMe: user.followsMe,
+                  width: 112.w,
                 ),
           onTap: () => context.push(AppRoutes.artistProfilePath(user.id)),
         );
@@ -187,11 +184,19 @@ class _FollowListScreenState extends ConsumerState<FollowListScreen> {
 }
 
 class _UserRow extends StatelessWidget {
-  const _UserRow({required this.user, required this.onTap, this.button});
+  const _UserRow({
+    required this.user,
+    required this.onTap,
+    this.button,
+    this.blocked = false,
+  });
 
   final FollowUserModel user;
   final VoidCallback onTap;
   final Widget? button;
+
+  /// You blocked them: a "Blocked" chip sits beside the name.
+  final bool blocked;
 
   @override
   Widget build(BuildContext context) {
@@ -215,14 +220,24 @@ class _UserRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    user.username,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.titleSmall?.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          user.username,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleSmall?.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      if (blocked) ...[
+                        AppSpacing.hGap(AppSpacing.sm),
+                        const AppBlockedChip(),
+                      ],
+                    ],
                   ),
                   Text(
                     user.displayName,
@@ -255,54 +270,3 @@ class _UserRow extends StatelessWidget {
   }
 }
 
-/// Lavender Follow / Follow Back, or an outlined Following.
-class _FollowButton extends StatelessWidget {
-  const _FollowButton({
-    required this.isFollowing,
-    required this.followBack,
-    required this.onPressed,
-  });
-
-  final bool isFollowing;
-  final bool followBack;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = isFollowing
-        ? LocaleKeys.discover_following.tr()
-        : (followBack
-            ? LocaleKeys.follow_list_follow_back.tr()
-            : LocaleKeys.discover_follow.tr());
-
-    return SizedBox(
-      width: 96.w,
-      height: 40.h,
-      child: Material(
-        color: isFollowing ? AppColors.elevated : AppColors.primary,
-        shape: RoundedRectangleBorder(
-          borderRadius: AppBorders.md,
-          side: BorderSide(
-            color: isFollowing ? AppColors.border : AppColors.primary,
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onPressed,
-          child: Center(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.textTheme.labelLarge?.copyWith(
-                color:
-                    isFollowing ? AppColors.textPrimary : AppColors.background,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

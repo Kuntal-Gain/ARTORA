@@ -5,12 +5,15 @@ class AppConfig {
   AppConfig._();
   static late final SupabaseClient supabase;
 
+  static String get supabaseUrl =>
+      dotenv.get('SUPABASE_URL', fallback: 'https://YOUR-PROJECT.supabase.co');
+  static String get supabaseAnonKey =>
+      dotenv.get('SUPABASE_ANON_KEY', fallback: 'YOUR-ANON-KEY');
+
   static Future<void> init() async {
     await Supabase.initialize(
-      url: dotenv.get('SUPABASE_URL',
-          fallback: 'https://YOUR-PROJECT.supabase.co'),
-      publishableKey:
-          dotenv.get('SUPABASE_ANON_KEY', fallback: 'YOUR-ANON-KEY'),
+      url: supabaseUrl,
+      publishableKey: supabaseAnonKey,
     );
     supabase = Supabase.instance.client;
   }

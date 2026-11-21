@@ -6,6 +6,7 @@ import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/model/artwork_req_model.dart';
 import 'package:artora/src/features/discover/presentation/providers/discover_providers.dart';
 import 'package:artora/src/imports/imports.dart';
+import 'package:artora/src/services/supabase_storage_service.dart';
 
 // ── USECASE ─────────────────────────────────────────────────
 
@@ -167,8 +168,12 @@ class PostArtworkNotifier extends StateNotifier<RequestState<void>> {
         super(const RequestInitial());
 
   /// Create or update, depending on the provider.
-  final Future<Resource<void>> Function(PostArtworkModel) _send;
+  final Future<Resource<void>> Function(PostArtworkModel, UploadProgress)
+      _send;
   final void Function() _onSuccess;
+
+  /// Image upload progress (0–1); `null` when nothing is uploading.
+  final progress = ValueNotifier<double?>(null);
 
   bool _isSubmitting = false;
 
@@ -179,10 +184,13 @@ class PostArtworkNotifier extends StateNotifier<RequestState<void>> {
     state = const RequestLoading();
 
     try {
-      final result = await _send(artwork);
+      final result = await _send(artwork, (p) {
+        if (mounted) progress.value = p;
+      });
 
       if (!mounted) return;
 
+      progress.value = null;
       state = result.toRequestState();
 
       if (result is ResourceSuccess<void>) {
@@ -197,6 +205,12 @@ class PostArtworkNotifier extends StateNotifier<RequestState<void>> {
     if (!mounted) return;
     state = const RequestInitial();
   }
+
+  @override
+  void dispose() {
+    progress.dispose();
+    super.dispose();
+  }
 }
 
 // ── POST ARTWORK PROVIDER ───────────────────────────────────
@@ -205,7 +219,9 @@ final postArtworkProvider =
     StateNotifierProvider.autoDispose<PostArtworkNotifier, RequestState<void>>(
   (ref) {
     return PostArtworkNotifier(
-      ref.watch(discoverUsecaseProvider).postArtwork,
+      (artwork, onProgress) => ref
+          .read(discoverUsecaseProvider)
+          .postArtwork(artwork, onProgress: onProgress),
       onSuccess: () {
         ref.invalidate(publicArtworkFeedProvider);
         ref.invalidate(userArtworkFeedProvider);
@@ -222,7 +238,8 @@ final updateArtworkProvider = StateNotifierProvider.autoDispose
     final usecase = ref.watch(discoverUsecaseProvider);
 
     return PostArtworkNotifier(
-      (artwork) => usecase.updateArtwork(artworkId, artwork),
+      (artwork, onProgress) =>
+          usecase.updateArtwork(artworkId, artwork, onProgress: onProgress),
       onSuccess: () {
         ref.invalidate(publicArtworkFeedProvider);
         ref.invalidate(userArtworkFeedProvider);

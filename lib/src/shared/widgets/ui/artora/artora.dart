@@ -1,6 +1,7 @@
 export 'artora_toggle_buttons.dart';
 export 'app_follow_button.dart';
 export 'app_artist_row.dart';
+export 'app_blocked_chip.dart';
 export 'app_artwork_card.dart';
 export 'app_profile_header.dart';
 export 'app_tag_chips.dart';

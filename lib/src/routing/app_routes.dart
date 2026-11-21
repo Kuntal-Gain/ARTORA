@@ -16,6 +16,9 @@ abstract final class AppRoutes {
   static const String saved = '/saved';
   static const String profile = '/profile';
   static const String settings = '/settings';
+  static const String editProfile = '/edit-profile';
+  static const String accountSettings = '/account-settings';
+  static const String blockedUsers = '/blocked-users';
 
   /// Create an artwork.
   static const String createArtwork = '/artwork/new';

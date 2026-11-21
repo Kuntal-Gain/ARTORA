@@ -27,8 +27,6 @@ class DiscoverHelper {
       'category:categories(id,name,slug,cover_url),'
       'images:artwork_images(image_url,thumbnail_url,mime_type,size,position)';
 
-  static const String likesTable = 'likes';
-  static const String bookmarksTable = 'artwork_bookmarks';
 
   SBClient get db => SBClient.instance;
   AuthService get authService => AuthService.instance;
@@ -220,10 +218,11 @@ class DiscoverHelper {
   /// `artwork_images` row values (without `artwork_id` / `position`).
   Future<Resource<List<SBRow>>> uploadImages(
     String uid,
-    List<File> files,
-  ) async {
+    List<File> files, {
+    UploadProgress? onProgress,
+  }) async {
     final images = <SBRow>[];
-    for (final file in files) {
+    for (final (index, file) in files.indexed) {
       final dot = file.path.lastIndexOf('.');
       final ext =
           dot == -1 ? 'jpg' : file.path.substring(dot + 1).toLowerCase();
@@ -258,6 +257,10 @@ class DiscoverHelper {
         path: path,
         file: file,
         contentType: mime,
+        // Each file is an equal slice of the overall bar.
+        onProgress: onProgress == null
+            ? null
+            : (p) => onProgress((index + p) / files.length),
       );
       final failure = upload.fold<Failure?>((f) => f, (_) => null);
       if (failure != null) return Resource<List<SBRow>>.error(failure);
@@ -311,7 +314,7 @@ class DiscoverHelper {
     };
 
     final existing = await db.get(
-      likesTable,
+      SupabaseTables.likes,
       columns: 'artwork_id',
       eq: eq,
       limit: 1,
@@ -320,13 +323,13 @@ class DiscoverHelper {
     return switch (existing) {
       ResourceSuccess<List<SBRow>>(:final data) when data.isNotEmpty =>
         (await db.delete(
-          likesTable,
+          SupabaseTables.likes,
           eq: eq,
         )).map<void>((_) {}),
 
       ResourceSuccess<List<SBRow>>() =>
         (await db.post(
-          likesTable,
+          SupabaseTables.likes,
           eq,
         )).map<void>((_) {}),
 
@@ -376,7 +379,7 @@ class DiscoverHelper {
     }
 
     final liked = await getRelationIds(
-      table: likesTable,
+      table: SupabaseTables.likes,
       uid: uid,
       artworkIds: ids,
     );
@@ -451,6 +454,52 @@ class DiscoverHelper {
     };
   }
 
+  /// Puts the relation in the wanted state instead of flipping it, so a stale
+  /// client can't double-insert or undo a change: saving what is already saved
+  /// (or unsaving what isn't) succeeds without doing anything.
+  Future<Resource<void>> setRelation({
+    required String table,
+    required String artworkId,
+    required bool on,
+  }) async {
+    final auth = await authUserId();
+    if (auth case ResourceError<String>(:final failure)) {
+      return Resource<void>.error(failure);
+    }
+    final eq = <String, Object?>{
+      'user_id': (auth as ResourceSuccess<String>).data,
+      'artwork_id': artworkId,
+    };
+
+    if (!on) return (await db.delete(table, eq: eq)).map<void>((_) {});
+
+    final existing = await db.getOne(table, columns: 'artwork_id', eq: eq);
+    return switch (existing) {
+      ResourceSuccess<SBRow>() => const Resource<void>.success(null),
+      ResourceError<SBRow>(:final failure) when failure is NotFoundFailure =>
+        (await db.post(table, eq)).map<void>((_) {}),
+      ResourceError<SBRow>(:final failure) => Resource<void>.error(failure),
+      ResourceLoading<SBRow>() => const Resource<void>.loading(),
+    };
+  }
+
+  /// Ids of everything the signed-in user saved (only theirs: see RLS).
+  Future<Resource<Set<String>>> getSavedIds() async {
+    final auth = await authUserId();
+    if (auth case ResourceError<String>(:final failure)) {
+      return Resource<Set<String>>.error(failure);
+    }
+    final result = await db.get(
+      SupabaseTables.savedArtworks,
+      columns: 'artwork_id',
+      eq: {'user_id': (auth as ResourceSuccess<String>).data},
+    );
+    return result.map(
+      (rows) =>
+          rows.map((row) => row['artwork_id']).whereType<String>().toSet(),
+    );
+  }
+
   Future<Resource<ArtworkListModel>> getArtworkPage({
     Map<String, Object?>? eq,
   }) async {
@@ -461,6 +510,24 @@ class DiscoverHelper {
       orderBy: 'created_at',
       ascending: false,
       limit: pageSize + 1,
+    );
+
+    return switch (result) {
+      ResourceSuccess<List<SBRow>>(:final data) => fromArtworkRows(data),
+      ResourceError<List<SBRow>>(:final failure) =>
+        Resource<ArtworkListModel>.error(failure),
+      ResourceLoading<List<SBRow>>() =>
+        const Resource<ArtworkListModel>.loading(),
+    };
+  }
+
+  /// Artworks by people the signed-in user follows (`get_following_feed`,
+  /// supabase/following_feed.sql). Fetches one extra row to know if more exist.
+  Future<Resource<ArtworkListModel>> getFollowingPage() async {
+    final result = await db.rpcRows(
+      SupabaseRpc.getFollowingFeed,
+      params: {'page_limit': pageSize + 1, 'page_offset': 0},
+      columns: artworkColumns,
     );
 
     return switch (result) {
@@ -621,7 +688,7 @@ class DiscoverHelper {
     required Set<String> likedIds,
   }) async {
     final saved = await getRelationIds(
-      table: bookmarksTable,
+      table: SupabaseTables.savedArtworks,
       uid: uid,
       artworkIds: artworkIds,
     );

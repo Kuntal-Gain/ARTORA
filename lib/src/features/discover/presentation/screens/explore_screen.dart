@@ -1,4 +1,5 @@
 import 'package:artora/src/features/discover/model/discover_models.dart';
+import 'package:artora/src/features/discover/presentation/providers/block_providers.dart';
 import 'package:artora/src/features/discover/presentation/providers/collection_providers.dart';
 import 'package:artora/src/features/discover/presentation/providers/discover_providers.dart';
 import 'package:artora/src/features/discover/presentation/providers/follow_providers.dart';
@@ -172,6 +173,7 @@ class _ExploreContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedCategory = ref.watch(exploreCategoryProvider);
     final following = ref.watch(followingProvider);
+    final blocked = ref.watch(blockedIdsProvider);
     final categories = content.categories;
 
     return Column(
@@ -264,7 +266,9 @@ class _ExploreContent extends ConsumerWidget {
                 artist: artist,
                 isFollowing: following.contains(artist.id),
                 onFollow: () =>
-                    ref.read(followingProvider.notifier).toggle(artist.id),
+                    ref.read(followActionsProvider).toggle(artist.id),
+                isBlocked: blocked.contains(artist.id),
+                onUnblock: () => unblockWithToast(ref, artist.id),
               );
             },
           ),

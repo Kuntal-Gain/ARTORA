@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:artora/src/middleware/app_route_observer.dart';
 import 'package:artora/src/routing/global_navigator.dart';
 import 'package:artora/src/routing/app_routes.dart';
+import 'package:artora/src/features/auth/presentation/screens/account_settings_screen.dart';
 import 'package:artora/src/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:artora/src/features/auth/presentation/screens/profile_setup_screen.dart';
 import 'package:artora/src/features/auth/presentation/screens/sign_in_screen.dart';
@@ -21,10 +22,13 @@ import 'package:artora/src/features/discover/presentation/screens/saved_screen.d
 import 'package:artora/src/features/discover/presentation/screens/search_screen.dart';
 import 'package:artora/src/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:artora/src/features/onboarding/view/welcome_screen.dart';
+import 'package:artora/src/features/profile/presentation/screens/blocked_users_screen.dart';
+import 'package:artora/src/features/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:artora/src/features/profile/presentation/screens/profile_screen.dart';
 import 'package:artora/src/features/profile/presentation/screens/follow_list_screen.dart';
 import 'package:artora/src/features/profile/presentation/screens/settings_screen.dart';
 import 'package:artora/src/routing/app_shell.dart';
+import 'package:artora/src/routing/not_found_screen.dart';
 import 'package:artora/src/features/splash/view/splash_screen.dart';
 import 'package:artora/src/shared/widgets/ui/ui_showcase_screen.dart';
 import 'package:flutter/foundation.dart';
@@ -33,6 +37,8 @@ final GoRouter appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: AppRoutes.splash,
   observers: <NavigatorObserver>[AppRouteObserver()],
+  // Unknown location (bad deep link, mistyped path): the 404 page.
+  errorBuilder: (context, state) => const NotFoundScreen(),
   routes: <RouteBase>[
     GoRoute(
       path: AppRoutes.splash,
@@ -122,6 +128,21 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const SettingsScreen(),
     ),
     GoRoute(
+      path: AppRoutes.accountSettings,
+      name: 'accountSettings',
+      builder: (context, state) => const AccountSettingsScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.blockedUsers,
+      name: 'blockedUsers',
+      builder: (context, state) => const BlockedUsersScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.editProfile,
+      name: 'editProfile',
+      builder: (context, state) => const EditProfileScreen(),
+    ),
+    GoRoute(
       path: AppRoutes.artistConnections,
       name: 'artistConnections',
       builder: (context, state) => FollowListScreen(
@@ -178,6 +199,7 @@ final GoRouter appRouter = GoRouter(
               name: 'profile',
               builder: (context, state) => ProfileScreen(
                 onMore: () => context.push(AppRoutes.settings),
+                onEditProfile: () => context.push(AppRoutes.editProfile),
               ),
             ),
           ],

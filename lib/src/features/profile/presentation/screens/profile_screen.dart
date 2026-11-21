@@ -4,9 +4,10 @@ import 'package:artora/src/features/auth/model/user_model.dart';
 import 'package:artora/src/features/auth/presentation/providers/auth_providers.dart';
 import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/model/collection_model.dart';
+import 'package:artora/src/features/discover/presentation/providers/block_providers.dart';
 import 'package:artora/src/features/discover/presentation/providers/collection_providers.dart';
 import 'package:artora/src/features/discover/state/artwork_provider.dart';
-import 'package:artora/src/features/discover/presentation/providers/follow_providers.dart';
+import 'package:artora/src/features/discover/presentation/widgets/follow_button.dart';
 import 'package:artora/src/imports/imports.dart';
 import 'package:artora/src/services/supabase_storage_service.dart';
 
@@ -119,6 +120,82 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     );
   }
 
+  /// Small menu under the dots button with "Block user" / "Unblock user".
+  Future<void> _showUserMenu(BuildContext anchor) async {
+    final blocked = ref.read(blockedIdsProvider).contains(_user?.id);
+    final button = anchor.findRenderObject()! as RenderBox;
+    final overlay =
+        Overlay.of(context).context.findRenderObject()! as RenderBox;
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    final choice = await showMenu<String>(
+      context: context,
+      position: position,
+      color: _ProfileColors.surface,
+      items: [
+        PopupMenuItem<String>(
+          value: blocked ? 'unblock' : 'block',
+          child: Row(
+            children: [
+              Icon(
+                AppIcons.block,
+                size: 20.r,
+                color: blocked ? _ProfileColors.text : context.colors.error,
+              ),
+              SizedBox(width: 10.r),
+              Text(
+                (blocked
+                        ? LocaleKeys.block_unblock_user
+                        : LocaleKeys.block_block_user)
+                    .tr(),
+                style: context.textTheme.bodyMedium?.copyWith(
+                  color: blocked ? _ProfileColors.text : context.colors.error,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    final user = _user;
+    if (user == null || !mounted) return;
+    switch (choice) {
+      case 'block':
+        final confirmed =
+            await AppDialogPresets.blockUser(context, user.username) ?? false;
+        if (confirmed) await _setBlocked(user.id, blocked: true);
+      case 'unblock':
+        await _setBlocked(user.id, blocked: false);
+    }
+  }
+
+  /// Blocks or unblocks and says so. The provider rolls back and shows the
+  /// error itself when the server refuses, so the toast only follows a change
+  /// that stuck.
+  Future<void> _setBlocked(String userId, {required bool blocked}) async {
+    await ref.read(blockedIdsProvider.notifier).toggle(userId);
+    if (!mounted || ref.read(blockedIdsProvider).contains(userId) != blocked) {
+      return;
+    }
+    // You can still see them after blocking, so you stay on the profile.
+    showGlobalToast(
+      message: (blocked
+              ? LocaleKeys.block_user_blocked
+              : LocaleKeys.block_user_unblocked)
+          .tr(),
+    );
+  }
+
   // Set at the top of build(); read by the scroll-driven avatar builder too.
   UserModel? _user;
 
@@ -206,12 +283,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Keeps the blocked ids loaded so the menu knows Block vs Unblock.
+    if (widget.userId != null) ref.watch(blockedIdsProvider);
+
     final id = widget.userId;
     _user = (id == null
             ? ref.watch(currentUserProvider)
             : ref.watch(userProfileProvider(id)))
         .value;
     _isOther = id != null && id != ref.watch(currentUserProvider).value?.id;
+    // You blocked them: follow / message lock and their posts are replaced by
+    // a notice (you can still unblock from the dots menu).
+    final blocked =
+        _isOther && id != null && ref.watch(blockedIdsProvider).contains(id);
     final specialties = _specialties;
     final uid = _user?.id;
     final feed = uid == null
@@ -236,34 +320,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           ),
         );
 
-    // Your own empty tabs invite you to create; on someone else's it's a note.
-    Widget empty({required bool collections}) => _isOther
-        ? message(
-            (collections
+    // Same empty state on every profile; only your own invites you to create.
+    Widget empty({required bool collections}) => SliverToBoxAdapter(
+          child: _ProfileEmpty(
+            title: (collections
                     ? LocaleKeys.profile_no_collections
                     : LocaleKeys.profile_no_artworks)
                 .tr(),
-          )
-        : SliverToBoxAdapter(
-            child: _ProfileEmpty(
-              title: (collections
-                      ? LocaleKeys.profile_no_collections
-                      : LocaleKeys.profile_no_artworks)
-                  .tr(),
-              hint: (collections
-                      ? LocaleKeys.profile_empty_collections_hint
-                      : LocaleKeys.profile_empty_artworks_hint)
-                  .tr(),
-              actionLabel: (collections
-                  ? LocaleKeys.profile_empty_collections_cta.tr()
-                  : LocaleKeys.profile_empty_artworks_cta.tr()),
-              onAction: () => context.push(
-                collections
-                    ? AppRoutes.createCollection
-                    : AppRoutes.createArtwork,
-              ),
-            ),
-          );
+            hint: (_isOther
+                    ? (collections
+                        ? LocaleKeys.profile_other_empty_collections_hint
+                        : LocaleKeys.profile_other_empty_artworks_hint)
+                    : (collections
+                        ? LocaleKeys.profile_empty_collections_hint
+                        : LocaleKeys.profile_empty_artworks_hint))
+                .tr(),
+            actionLabel: _isOther
+                ? null
+                : (collections
+                    ? LocaleKeys.profile_empty_collections_cta.tr()
+                    : LocaleKeys.profile_empty_artworks_cta.tr()),
+            onAction: _isOther
+                ? null
+                : () => context.push(
+                      collections
+                          ? AppRoutes.createCollection
+                          : AppRoutes.createArtwork,
+                    ),
+          ),
+        );
 
     final loading = SliverToBoxAdapter(
       child: Padding(
@@ -276,7 +361,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
         ? const RequestLoading<List<CollectionModel>>()
         : ref.watch(userCollectionsProvider(uid));
 
+    const blockedNotice = SliverToBoxAdapter(child: _BlockedNotice());
+
     final Widget collectionsSliver = switch (collections) {
+      _ when blocked => blockedNotice,
       RequestInitial() || RequestLoading() => loading,
       RequestFailure(:final failure) => message(failure.message),
       RequestSuccess(:final data) when data.isEmpty => empty(collections: true),
@@ -295,6 +383,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     };
 
     final Widget artworksSliver = switch (feed) {
+      _ when blocked => blockedNotice,
       RequestInitial() || RequestLoading() => loading,
       RequestFailure() => message(LocaleKeys.profile_load_failed.tr()),
       RequestSuccess() when artworks.isEmpty => empty(collections: false),
@@ -413,18 +502,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                               : null,
                           actions: [
                             // The gear opens Settings, which only makes sense on
-                            // your own profile.
-                            if (!_isOther)
-                              Padding(
-                                padding: EdgeInsets.only(right: 18.r),
-                                child: Center(
-                                  child: _HeaderAction(
-                                    icon: AppIcons.settings,
-                                    tooltip: LocaleKeys.settings_title.tr(),
-                                    onTap: widget.onMore,
-                                  ),
-                                ),
+                            // your own profile; on someone else's, the dots
+                            // open a menu with Block user.
+                            Padding(
+                              padding: EdgeInsets.only(right: 18.r),
+                              child: Center(
+                                child: !_isOther
+                                    ? _HeaderAction(
+                                        icon: AppIcons.settings,
+                                        tooltip:
+                                            LocaleKeys.settings_title.tr(),
+                                        onTap: widget.onMore,
+                                      )
+                                    : Builder(
+                                        builder: (anchor) => _HeaderAction(
+                                          icon: AppIcons.more,
+                                          tooltip:
+                                              LocaleKeys.block_block_user.tr(),
+                                          onTap: _user == null
+                                              ? null
+                                              : () => _showUserMenu(anchor),
+                                        ),
+                                      ),
                               ),
+                            ),
                           ],
                           flexibleSpace: FlexibleSpaceBar(
                             collapseMode: CollapseMode.pin,
@@ -471,7 +572,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                                 child: _ProfileHeader(
                                   onEditProfile: widget.onEditProfile,
                                   other: _isOther
-                                      ? _OtherActions(userId: widget.userId!)
+                                      ? _OtherActions(
+                                          userId: widget.userId!,
+                                          blocked: blocked,
+                                        )
                                       : null,
                                 ),
                               ),
@@ -552,11 +656,16 @@ class _ProfileHeader extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(
-            right: 20.r,
-            top: 14.r,
-            child: other ?? _EditProfileButton(onTap: onEditProfile),
-          ),
+          if (other != null)
+            // Stays in the space right of the avatar (20 margin + 96 avatar +
+            // 12 gap), so the buttons shrink to fit instead of sliding under it.
+            Positioned(left: 128.r, right: 20.r, top: 14.r, child: other!)
+          else
+            Positioned(
+              right: 20.r,
+              top: 14.r,
+              child: _EditProfileButton(onTap: onEditProfile),
+            ),
         ],
       ),
     );
@@ -800,68 +909,141 @@ class _EditProfileButton extends StatelessWidget {
 
 /// Follow toggle and Message button for another artist's profile.
 class _OtherActions extends ConsumerWidget {
-  const _OtherActions({required this.userId});
+  const _OtherActions({required this.userId, this.blocked = false});
 
   final String userId;
 
+  /// You blocked them: both buttons show a lock and explain why they're off.
+  final bool blocked;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final following = ref.watch(followingProvider).contains(userId);
     final style = context.textTheme.labelMedium?.copyWith(
       fontWeight: FontWeight.w700,
       fontSize: 13.sp,
     );
+    // Two equal buttons that share whatever width the header gives them.
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(
-          height: 40.r,
-          child: OutlinedButton(
-            // No messaging backend yet.
-            onPressed: () => showGlobalToast(
-              message: LocaleKeys.profile_messaging_soon.tr(),
-            ),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _ProfileColors.text,
-              backgroundColor: const Color(0xFF1B1727),
-              side: const BorderSide(color: _ProfileColors.border),
-              padding: EdgeInsets.symmetric(horizontal: 18.r),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-            ),
-            child: Text(LocaleKeys.profile_message.tr(), style: style),
+        Expanded(
+          child: SizedBox(
+            // Matches FollowButton's ButtonSize.small height.
+            height: 36.h,
+            child: blocked
+                ? _LockedButton(label: LocaleKeys.profile_message.tr())
+                : OutlinedButton(
+                    // No messaging backend yet.
+                    onPressed: () => showGlobalToast(
+                      message: LocaleKeys.profile_messaging_soon.tr(),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _ProfileColors.text,
+                      backgroundColor: const Color(0xFF1B1727),
+                      side: const BorderSide(color: _ProfileColors.border),
+                      padding: EdgeInsets.symmetric(horizontal: 8.r),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                    child: Text(
+                      LocaleKeys.profile_message.tr(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: style,
+                    ),
+                  ),
           ),
         ),
-        SizedBox(width: 10.r),
-        SizedBox(
-          height: 40.r,
-          child: FilledButton(
-            onPressed: () =>
-                ref.read(followingProvider.notifier).toggle(userId),
-            style: FilledButton.styleFrom(
-              backgroundColor:
-                  following ? const Color(0xFF1B1727) : _ProfileColors.accent,
-              foregroundColor:
-                  following ? _ProfileColors.text : const Color(0xFF160D24),
-              side: following
-                  ? const BorderSide(color: _ProfileColors.border)
-                  : null,
-              padding: EdgeInsets.symmetric(horizontal: 22.r),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-            ),
-            child: Text(
-              (following
-                      ? LocaleKeys.discover_following
-                      : LocaleKeys.discover_follow)
-                  .tr(),
-              style: style,
-            ),
-          ),
+        SizedBox(width: 8.r),
+        Expanded(
+          child: blocked
+              ? SizedBox(
+                  height: 36.h,
+                  child: _LockedButton(label: LocaleKeys.discover_follow.tr()),
+                )
+              : FollowButton(userId: userId),
         ),
       ],
+    );
+  }
+}
+
+/// Greyed-out button with a lock; tapping says to unblock first.
+class _LockedButton extends StatelessWidget {
+  const _LockedButton({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = context.colors.onSurfaceVariant;
+    return Material(
+      color: const Color(0xFF14111D),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.r),
+        side: const BorderSide(color: _ProfileColors.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () =>
+            showGlobalToast(message: LocaleKeys.block_unblock_first.tr()),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8.r),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(AppIcons.lock, size: 16.r, color: muted),
+              SizedBox(width: 6.r),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.textTheme.labelMedium?.copyWith(
+                    color: muted,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13.sp,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown in place of a blocked person's posts and collections.
+class _BlockedNotice extends StatelessWidget {
+  const _BlockedNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = context.colors.onSurfaceVariant;
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 40.r, horizontal: 24.r),
+      child: Column(
+        children: [
+          Icon(AppIcons.block, size: 40.r, color: muted),
+          SizedBox(height: 12.r),
+          Text(
+            LocaleKeys.block_user_is_blocked.tr(),
+            textAlign: TextAlign.center,
+            style: context.textTheme.titleMedium?.copyWith(
+              color: _ProfileColors.text,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 6.r),
+          Text(
+            LocaleKeys.block_blocked_hint.tr(),
+            textAlign: TextAlign.center,
+            style: context.textTheme.bodySmall?.copyWith(color: muted),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1020,14 +1202,16 @@ class _ProfileEmpty extends StatelessWidget {
   const _ProfileEmpty({
     required this.title,
     required this.hint,
-    required this.actionLabel,
-    required this.onAction,
+    this.actionLabel,
+    this.onAction,
   });
 
   final String title;
   final String hint;
-  final String actionLabel;
-  final VoidCallback onAction;
+
+  /// Both null on someone else's profile: there's nothing for you to create.
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -1058,27 +1242,29 @@ class _ProfileEmpty extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(height: 24.r),
-          SizedBox(
-            width: double.infinity,
-            height: 52.r,
-            child: FilledButton(
-              onPressed: onAction,
-              style: FilledButton.styleFrom(
-                backgroundColor: _ProfileColors.accent,
-                foregroundColor: const Color(0xFF160D24),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.r),
+          if (actionLabel != null && onAction != null) ...[
+            SizedBox(height: 24.r),
+            SizedBox(
+              width: double.infinity,
+              height: 52.r,
+              child: FilledButton(
+                onPressed: onAction,
+                style: FilledButton.styleFrom(
+                  backgroundColor: _ProfileColors.accent,
+                  foregroundColor: const Color(0xFF160D24),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16.r),
+                  ),
                 ),
-              ),
-              child: Text(
-                actionLabel,
-                style: textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
+                child: Text(
+                  actionLabel!,
+                  style: textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

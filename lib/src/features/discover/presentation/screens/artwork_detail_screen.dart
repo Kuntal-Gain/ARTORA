@@ -1,9 +1,10 @@
 ﻿import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/model/discover_models.dart';
+import 'package:artora/src/features/discover/presentation/providers/block_providers.dart';
 import 'package:artora/src/features/discover/presentation/providers/discover_providers.dart';
 import 'package:artora/src/features/discover/presentation/widgets/comments_section.dart';
 import 'package:artora/src/features/discover/state/artwork_provider.dart';
-import 'package:artora/src/features/discover/presentation/providers/follow_providers.dart';
+import 'package:artora/src/features/discover/presentation/widgets/follow_button.dart';
 import 'package:artora/src/features/discover/state/comments_provider.dart';
 import 'package:artora/src/imports/imports.dart';
 
@@ -181,8 +182,6 @@ class _ArtworkDetailScreenState extends ConsumerState<ArtworkDetailScreen> {
         .where((a) => a.id != id && a.category == (art.category?.name ?? ''))
         .take(6)
         .toList();
-    final following =
-        artist != null && ref.watch(followingProvider).contains(artist.id);
     final isOwner = AppConfig.supabase.auth.currentUser?.id == art.userId;
 
     final width = MediaQuery.sizeOf(context).width;
@@ -265,13 +264,7 @@ class _ArtworkDetailScreenState extends ConsumerState<ArtworkDetailScreen> {
                         AppSpacing.pagePadding,
                         overlap + AppSpacing.sm,
                       ),
-                      child: _ArtistRow(
-                        artist: artist,
-                        following: following,
-                        onFollow: () => ref
-                            .read(followingProvider.notifier)
-                            .toggle(artist.id),
-                      ),
+                      child: _ArtistRow(artist: artist, showFollow: !isOwner),
                     ),
                   ),
                 ),
@@ -452,20 +445,19 @@ class _OverlayIcon extends StatelessWidget {
   }
 }
 
-class _ArtistRow extends StatelessWidget {
-  const _ArtistRow({
-    required this.artist,
-    required this.following,
-    required this.onFollow,
-  });
+class _ArtistRow extends ConsumerWidget {
+  const _ArtistRow({required this.artist, required this.showFollow});
 
   final Artist artist;
-  final bool following;
-  final VoidCallback onFollow;
+
+  /// Off for your own artwork.
+  final bool showFollow;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = context.textTheme;
+    final blocked =
+        ref.watch(blockedIdsProvider.select((ids) => ids.contains(artist.id)));
     return Row(
       children: [
         Expanded(
@@ -484,12 +476,24 @@ class _ArtistRow extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        artist.username,
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              artist.username,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          if (blocked) ...[
+                            AppSpacing.hGap(AppSpacing.sm),
+                            const AppBlockedChip(),
+                          ],
+                        ],
                       ),
                       Text(
                         LocaleKeys.discover_followers.tr(
@@ -505,39 +509,10 @@ class _ArtistRow extends StatelessWidget {
             ),
           ),
         ),
-        AppSpacing.hGap(AppSpacing.ms),
-        Material(
-          color: following
-              ? AppColors.transparent
-              : AppColors.primary.withValues(alpha: 0.12),
-          shape: RoundedRectangleBorder(
-            borderRadius: AppBorders.md,
-            side: BorderSide(
-              color: following ? AppColors.border : AppColors.primary,
-            ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onFollow,
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.sm,
-              ),
-              child: Text(
-                following
-                    ? LocaleKeys.discover_following.tr()
-                    : LocaleKeys.discover_follow.tr(),
-                style: textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: following
-                      ? AppColors.textSecondary
-                      : AppColors.textPrimary,
-                ),
-              ),
-            ),
-          ),
-        ),
+        if (showFollow) ...[
+          AppSpacing.hGap(AppSpacing.ms),
+        ],
+        if (showFollow) FollowButton(userId: artist.id),
       ],
     );
   }

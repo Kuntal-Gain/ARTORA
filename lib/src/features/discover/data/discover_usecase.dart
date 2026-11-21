@@ -2,11 +2,13 @@ import 'dart:io';
 
 import 'package:artora/src/features/discover/model/artwork_model.dart';
 import 'package:artora/src/features/discover/model/artwork_req_model.dart';
+import 'package:artora/src/features/discover/model/blocked_user_model.dart';
 import 'package:artora/src/features/discover/model/collection_model.dart';
 import 'package:artora/src/features/discover/model/comment_model.dart';
 import 'package:artora/src/features/discover/model/discover_models.dart';
 import 'package:artora/src/features/discover/model/follow_model.dart';
 import 'package:artora/src/imports/imports.dart';
+import 'package:artora/src/services/supabase_storage_service.dart';
 
 abstract class DiscoverUsecase {
   // ═══════════════════════════════════════════════════════════
@@ -15,6 +17,10 @@ abstract class DiscoverUsecase {
 
   /// get [public] feed
   Future<Resource<ArtworkListModel>> getPublicFeed();
+
+  /// get public artworks from people the signed-in user follows, newest first
+  /// (needs supabase/following_feed.sql)
+  Future<Resource<ArtworkListModel>> getFollowingPosts();
 
   /// get [user] feed
   Future<Resource<ArtworkListModel>> getUserFeed(String uid);
@@ -55,6 +61,16 @@ abstract class DiscoverUsecase {
   /// stop following [userId]; safe to repeat. Their follow of you stays.
   Future<Resource<void>> unfollowUser(String userId);
 
+  /// block [userId]; safe to repeat. Removes follows both ways and hides each
+  /// other everywhere (needs supabase/blocks.sql)
+  Future<Resource<void>> blockUser(String userId);
+
+  /// unblock [userId]; safe to repeat. Follows are not restored.
+  Future<Resource<void>> unblockUser(String userId);
+
+  /// people the signed-in user blocked, newest first
+  Future<Resource<List<BlockedUserModel>>> getBlockedUsers();
+
   /// people who follow [userId], newest first (needs supabase/follows.sql)
   Future<Resource<List<FollowUserModel>>> getFollowers(
     String userId, {
@@ -74,13 +90,18 @@ abstract class DiscoverUsecase {
   // ═══════════════════════════════════════════════════════════
 
   /// post an new [ARTWORK] to the platform
-  Future<Resource<void>> postArtwork(PostArtworkModel artwork);
+  /// [onProgress] reports the image upload (0–1).
+  Future<Resource<void>> postArtwork(
+    PostArtworkModel artwork, {
+    UploadProgress? onProgress,
+  });
 
   /// update an own [ARTWORK]; empty `images` keeps the current ones
   Future<Resource<void>> updateArtwork(
     String artworkId,
-    PostArtworkModel artwork,
-  );
+    PostArtworkModel artwork, {
+    UploadProgress? onProgress,
+  });
 
   /// all artwork categories, by name
   Future<Resource<List<ArtworkCategoryModel>>> getCategories();
@@ -99,6 +120,13 @@ abstract class DiscoverUsecase {
 
   /// save/unsave a [Artwork]
   Future<Resource<void>> toggleSave(String artworkId);
+
+  /// put an artwork in the wanted saved state; safe to repeat. You can save your
+  /// own artwork (any visibility) or anyone's public one (supabase/saved_artworks.sql).
+  Future<Resource<void>> setSaved(String artworkId, {required bool saved});
+
+  /// ids of every artwork the signed-in user saved
+  Future<Resource<Set<String>>> getSavedIds();
 
   // ═══════════════════════════════════════════════════════════
   // COLLECTIONS — owner-made folders of artworks (needs supabase/collections.sql)

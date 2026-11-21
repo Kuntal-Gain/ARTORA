@@ -1,4 +1,5 @@
 import 'package:artora/src/features/discover/model/discover_models.dart';
+import 'package:artora/src/features/discover/presentation/providers/block_providers.dart';
 import 'package:artora/src/features/discover/presentation/providers/discover_providers.dart';
 import 'package:artora/src/features/discover/presentation/providers/follow_providers.dart';
 import 'package:artora/src/features/discover/presentation/widgets/artwork_masonry.dart';
@@ -373,6 +374,8 @@ class _ResultsBody extends ConsumerWidget {
       case SearchScope.artists:
         if (results.artists.isEmpty) return noResults;
         final following = ref.watch(followingProvider);
+        final pending = ref.watch(followPendingProvider);
+        final blocked = ref.watch(blockedIdsProvider);
         return Column(
           children: [
             for (final artist in results.artists)
@@ -383,11 +386,16 @@ class _ResultsBody extends ConsumerWidget {
                 bio: LocaleKeys.discover_followers.tr(
                   namedArgs: {'count': formatCompact(artist.followers)},
                 ),
-                isFollowing: following.contains(artist.id),
+                isFollowing: artist.id == AppConfig.supabase.auth.currentUser?.id
+                    ? null
+                    : following.contains(artist.id),
+                isFollowLoading: pending.contains(artist.id),
                 onTap: () =>
                     context.push(AppRoutes.artistProfilePath(artist.id)),
                 onFollow: () =>
-                    ref.read(followingProvider.notifier).toggle(artist.id),
+                    ref.read(followActionsProvider).toggle(artist.id),
+                isBlocked: blocked.contains(artist.id),
+                onUnblock: () => unblockWithToast(ref, artist.id),
               ),
           ],
         );

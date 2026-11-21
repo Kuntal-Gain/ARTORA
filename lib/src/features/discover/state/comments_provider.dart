@@ -208,7 +208,7 @@ final commentsProvider = StateNotifierProvider.autoDispose
     // Live comments. Needs `comments` in the supabase_realtime publication
     // (see supabase/comments.sql).
     final channel = SBClient.instance.subscribeChanges(
-      'comments',
+      SupabaseTables.comments,
       event: PostgresChangeEvent.all,
       filter: PostgresChangeFilter(
         type: PostgresChangeFilterType.eq,

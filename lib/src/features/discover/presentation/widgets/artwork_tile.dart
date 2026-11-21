@@ -15,6 +15,8 @@ class ArtworkTile extends StatelessWidget {
     required this.onBookmark,
     this.isFollowing,
     this.onFollow,
+    this.isBlocked = false,
+    this.onUnblock,
     this.onTap,
   });
 
@@ -25,6 +27,10 @@ class ArtworkTile extends StatelessWidget {
   final VoidCallback onBookmark;
   final bool? isFollowing;
   final VoidCallback? onFollow;
+
+  /// You blocked this artist: the Follow pill becomes Unblock.
+  final bool isBlocked;
+  final VoidCallback? onUnblock;
   final VoidCallback? onTap;
 
   void _openArtist(BuildContext context) {
@@ -48,12 +54,23 @@ class ArtworkTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AspectRatio(
-              aspectRatio: artwork.aspectRatio,
-              child: Stack(
-                fit: StackFit.expand,
+            // The image sets the tile's height (full width, natural shape).
+            // While it loads, or if it fails, a box at the saved aspect ratio
+            // holds the space; a bare placeholder would have no height here.
+            Stack(
                 children: [
-                  CommonImage(imageUrl: artwork.imageUrl, fit: BoxFit.cover),
+                  SizedBox(
+                    width: double.infinity,
+                    child: CommonImage(
+                      imageUrl: artwork.imageUrl,
+                      fit: BoxFit.fitWidth,
+                      placeholder: _ImageBox(artwork.aspectRatio),
+                      errorWidget: _ImageBox(
+                        artwork.aspectRatio,
+                        child: const Icon(AppIcons.brokenImage),
+                      ),
+                    ),
+                  ),
                   Positioned(
                     left: 0,
                     right: 0,
@@ -111,7 +128,6 @@ class ArtworkTile extends StatelessWidget {
                     ),
                   ),
                 ],
-              ),
             ),
             Padding(
               padding: EdgeInsets.all(AppSpacing.sm),
@@ -152,10 +168,21 @@ class ArtworkTile extends StatelessWidget {
                           children: [
                             _ArtistAvatar(artist: artwork.artist, radius: 12),
                             AppSpacing.hGap(AppSpacing.sm),
-                            Expanded(child: _Name(artwork.artist.username)),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Flexible(child: _Name(artwork.artist.username)),
+                                  if (isBlocked) ...[
+                                    AppSpacing.hGap(AppSpacing.xs),
+                                    const AppBlockedChip(),
+                                  ],
+                                ],
+                              ),
+                            ),
                             FollowPill(
                               isFollowing: following,
-                              onPressed: onFollow,
+                              blocked: isBlocked,
+                              onPressed: isBlocked ? onUnblock : onFollow,
                             ),
                           ],
                         ),
@@ -187,17 +214,22 @@ class FollowPill extends StatelessWidget {
     required this.isFollowing,
     required this.onPressed,
     this.filled = false,
+    this.blocked = false,
   });
 
   final bool isFollowing;
   final VoidCallback? onPressed;
   final bool filled;
 
+  /// You blocked them: shows Unblock (muted outline) instead of Follow.
+  final bool blocked;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final solid = filled && !isFollowing;
-    final foreground = isFollowing
+    final muted = isFollowing || blocked;
+    final solid = filled && !muted;
+    final foreground = muted
         ? colors.onSurfaceVariant
         : (solid ? AppColors.textPrimary : colors.primary);
 
@@ -206,7 +238,7 @@ class FollowPill extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: AppBorders.sm,
         side: BorderSide(
-          color: isFollowing
+          color: muted
               ? colors.outline
               : (solid ? AppColors.primaryPressed : colors.primary),
         ),
@@ -220,9 +252,11 @@ class FollowPill extends StatelessWidget {
             vertical: AppSpacing.xs,
           ),
           child: Text(
-            isFollowing
-                ? LocaleKeys.discover_following.tr()
-                : LocaleKeys.discover_follow.tr(),
+            blocked
+                ? LocaleKeys.block_unblock.tr()
+                : isFollowing
+                    ? LocaleKeys.discover_following.tr()
+                    : LocaleKeys.discover_follow.tr(),
             style: context.textTheme.labelMedium?.copyWith(
               color: foreground,
               fontWeight: FontWeight.w600,
@@ -232,6 +266,23 @@ class FollowPill extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Image-shaped placeholder box for loading / failed images.
+class _ImageBox extends StatelessWidget {
+  const _ImageBox(this.aspectRatio, {this.child});
+
+  final double aspectRatio;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) => AspectRatio(
+        aspectRatio: aspectRatio,
+        child: ColoredBox(
+          color: context.colors.surfaceContainerHighest,
+          child: child == null ? null : Center(child: child),
+        ),
+      );
 }
 
 class _ArtistAvatar extends StatelessWidget {

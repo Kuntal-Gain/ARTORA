@@ -78,6 +78,7 @@ dependencies:
 
   flutter_native_splash: ^2.4.7
   hugeicons_pro: ^0.0.3
+  image_cropper: ^14.0.0
 
 dev_dependencies:
   flutter_test:

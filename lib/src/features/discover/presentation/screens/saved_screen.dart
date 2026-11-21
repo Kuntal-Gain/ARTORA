@@ -10,6 +10,8 @@ class SavedScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final saved = ref.watch(savedArtworksProvider);
+    // Unsaving here removes the card right away, before the list reloads.
+    final bookmarked = ref.watch(bookmarkedProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -42,15 +44,17 @@ class SavedScreen extends ConsumerWidget {
                   RequestLoading() =>
                     const MasonrySkeleton(),
                   RequestFailure() => AppErrorPresets.network(
-                      onRetry: () => ref.read(feedProvider.notifier).refresh(),
+                      onRetry: () =>
+                          ref.read(savedArtworksProvider.notifier).refresh(),
                     ),
-                  RequestSuccess(:final data) when data.isEmpty =>
-                    AppEmptyPresets.noSaved(
-                      onExplore: () => context.go(AppRoutes.explore),
-                    ),
-                  RequestSuccess(:final data) => ArtworkMasonry(
-                      artworks: data,
-                    ),
+                  RequestSuccess(:final data) => switch (data
+                        .where((a) => bookmarked.contains(a.id))
+                        .toList()) {
+                      final items when items.isEmpty => AppEmptyPresets.noSaved(
+                          onExplore: () => context.go(AppRoutes.explore),
+                        ),
+                      final items => ArtworkMasonry(artworks: items),
+                    },
                 },
               ),
             ),

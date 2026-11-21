@@ -38,6 +38,7 @@ abstract final class AppIcons {
   static const IconData close = HugeIconsStroke.cancel01;
   static const IconData clearFilled = HugeIconsSolid.cancelCircle;
   static const IconData check = HugeIconsSolid.checkmarkCircle01;
+  static const IconData checkmark = HugeIconsStroke.tick02;
   static const IconData edit = HugeIconsStroke.edit02;
   static const IconData send = HugeIconsStroke.sent;
   static const IconData share = HugeIconsStroke.share01;
